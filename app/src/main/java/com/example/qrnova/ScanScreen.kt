@@ -12,9 +12,9 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -27,11 +27,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -51,6 +53,8 @@ fun ScanScreen() {
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     var scanResult by remember { mutableStateOf<String?>(null) }
+    var cameraControl by remember { mutableStateOf<androidx.camera.core.CameraControl?>(null) }
+    var zoomState by remember { mutableFloatStateOf(1f) }
 
     // Request Camera Permission
     LaunchedEffect(Unit) {
@@ -74,7 +78,14 @@ fun ScanScreen() {
             .height(320.dp)
         ) {
             AndroidView(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f)
+                    .pointerInput(Unit){
+                        detectTransformGestures{_,_,zoom,_ ->
+                            val newZoom  = (zoomState + zoom).coerceIn(1f, 5f)
+                            zoomState = newZoom
+                            cameraControl?.setZoomRatio(newZoom)
+                        }
+                    },
                 factory = { androidViewContext ->
                     val previewView = androidx.camera.view.PreviewView(androidViewContext)
 
@@ -96,6 +107,7 @@ fun ScanScreen() {
                                     result?.let {
                                         scanResult = it
                                         Log.d("QRScan", "QR Code detected: $it")
+                                        cameraControl?.setZoomRatio(2.5f)
                                     }
                                     imageProxy.close()
                                 }
@@ -105,12 +117,13 @@ fun ScanScreen() {
 
                         try {
                             cameraProvider.unbindAll()
-                            cameraProvider.bindToLifecycle(
+                            val camera = cameraProvider.bindToLifecycle(
                                 lifecycleOwner,
                                 cameraSelector,
                                 preview,
                                 imageAnalysis
                             )
+                            cameraControl = camera.cameraControl
                         } catch (exc: Exception) {
                             Log.e("QRScan", "Use case binding failed", exc)
                         }
@@ -147,35 +160,7 @@ fun ScanScreen() {
             }
         }
 
-//        scanResult?.let { result ->
-//            val isLink = result.startsWith("http://") || result.startsWith("https://")
-//            if (isLink) {
-//                ClickableText(
-//                    text = AnnotatedString(
-//                        text = "Scanned: $result",
-//                        spanStyles = listOf(
-//                            AnnotatedString.Range(
-//                                item = SpanStyle(
-//                                    color = MaterialTheme.colorScheme.primary,
-//                                    textDecoration = TextDecoration.Underline
-//                                ),
-//                                start = 0,
-//                                end = result.length
-//                            )
-//                        )
-//                    ),
-//                    onClick = {
-//                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(result))
-//                        ContextCompat.startActivity(context, intent, null)
-//                    }
-//                )
-//            } else {
-//                Text(
-//                    text = "Scanned: $result",
-//                    style = MaterialTheme.typography.bodyMedium
-//                )
-//            }
-//        }
+
         Spacer(modifier = Modifier.weight(1f))
         // Show scan result
         scanResult?.let { result ->
