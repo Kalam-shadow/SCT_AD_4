@@ -2,47 +2,31 @@ package com.example.qrnova
 
 import android.os.Build
 import android.os.Bundle
-import android.widget.Space
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.BottomNavigation
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.BottomNavigationItem
-import androidx.compose.material.Button
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.BackspaceCommand
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.core.view.WindowCompat
@@ -96,35 +80,75 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+//    @Composable
+//    fun BottomNavigationBar(
+//        navController: androidx.navigation.NavHostController,
+//        currentDestination: androidx.navigation.NavDestination?,
+//        topLevelRoutes: List<TopLevelRoute>
+//    ) {
+//        BottomNavigation(
+//            backgroundColor = MaterialTheme.colorScheme.surface
+//        ) {
+//            topLevelRoutes.forEach { topLevelRoute ->
+//                BottomNavigationItem(
+//                    modifier = Modifier.padding(8.dp),
+//                    icon = { Icon(topLevelRoute.icon, contentDescription = topLevelRoute.name,
+//                        tint = MaterialTheme.colorScheme.onSurface) },
+//                    label = { Text(topLevelRoute.name,color = MaterialTheme.colorScheme.onSurface) },
+//                    selected = currentDestination?.route == topLevelRoute.route,
+//                    onClick = {
+//                        navController.navigate(topLevelRoute.route) {
+//                            popUpTo(navController.graph.findStartDestination().id) {
+//                                saveState = true
+//                            }
+//                            launchSingleTop = true
+//                            restoreState = true
+//                        }
+//                    }
+//                )
+//            }
+//        }
+//    }
     @Composable
     fun BottomNavigationBar(
         navController: androidx.navigation.NavHostController,
         currentDestination: androidx.navigation.NavDestination?,
         topLevelRoutes: List<TopLevelRoute>
     ) {
-        BottomNavigation(
-            backgroundColor = MaterialTheme.colorScheme.surface
+        NavigationBar(
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp // Adds a shadow effect for better depth
         ) {
             topLevelRoutes.forEach { topLevelRoute ->
-                BottomNavigationItem(
-                    modifier = Modifier.padding(8.dp),
-                    icon = { Icon(topLevelRoute.icon, contentDescription = topLevelRoute.name,
-                        tint = MaterialTheme.colorScheme.onSurface) },
-                    label = { Text(topLevelRoute.name,color = MaterialTheme.colorScheme.onSurface) },
-                    selected = currentDestination?.route == topLevelRoute.route,
-                    onClick = {
-                        navController.navigate(topLevelRoute.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
+                val isSelected = currentDestination?.route == topLevelRoute.route
+
+                NavigationBarItem(
+                    selected = isSelected, onClick = {
+                    navController.navigate(topLevelRoute.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
                         }
+                        launchSingleTop = true
+                        restoreState = true
                     }
+                }, icon = {
+                    Icon(
+                        topLevelRoute.icon,
+                        contentDescription = topLevelRoute.name,
+                        tint = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray
+                    )
+                }, label = {
+                    Text(
+                        topLevelRoute.name,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray
+                    )
+                }, alwaysShowLabel = true
                 )
             }
         }
     }
+
 
     data class TopLevelRoute(val name: String, val route: String, val icon: ImageVector)
 

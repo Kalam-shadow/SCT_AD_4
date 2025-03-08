@@ -23,27 +23,22 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.windowInsetsEndWidth
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.ElevatedCard
+import androidx.compose.material.icons.filled.FlashOff
+import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -63,23 +58,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.MultiFormatReader
 import com.google.zxing.NotFoundException
 import com.google.zxing.PlanarYUVLuminanceSource
+import com.google.zxing.RGBLuminanceSource
 import com.google.zxing.common.HybridBinarizer
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
-import androidx.core.net.toUri
-import com.google.zxing.RGBLuminanceSource
 
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
@@ -157,7 +150,6 @@ fun ScanScreen() {
     ) {innerPadding ->
         Box(
             modifier = Modifier.fillMaxSize()
-                .padding(innerPadding)
         ) {
             AndroidView(
                 modifier = Modifier
@@ -236,11 +228,14 @@ fun ScanScreen() {
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp)
+                    .padding(innerPadding),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
+                        .background(color = Color.Black.copy(alpha = 0.4f),shape = CircleShape)
+                        .padding(8.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     IconButton(onClick = {
@@ -248,13 +243,13 @@ fun ScanScreen() {
                         cameraControl?.enableTorch(isTorchOn)
                     }) {
                         Icon(
-                            imageVector = if (isTorchOn) Icons.Filled.Search else Icons.Filled.Clear,
+                            imageVector = if (isTorchOn) Icons.Filled.FlashOn else Icons.Filled.FlashOff,
                             contentDescription = "Toggle Flash",
                             tint = Color.White,
                             modifier = Modifier.size(32.dp)
                         )
                     }
-                    OutlinedButton(onClick = {
+                    ElevatedButton(onClick = {
                         imagePickerLauncher.launch("image/*") // Open image picker
                     }) {
                         Text("Upload QR Code")

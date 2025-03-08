@@ -66,4 +66,8 @@ dependencies {
 
     // ZXing (QR Code Scanner)
     implementation(libs.core)
+
+    //torch material extend
+    implementation("androidx.compose.material:material-icons-extended:1.7.8")
+
 }
