@@ -14,6 +14,7 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.example.qrnova.ui.theme.ColorPalette.DarkColorScheme
 
 object ColorPalette {
     val Purple40 = Color(0xFF6650a4)

@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
@@ -32,10 +33,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FlashOff
@@ -81,7 +80,7 @@ import java.util.concurrent.Executors
 
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
-fun ScanScreen() {
+fun ScanScreen(qrText: String) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
@@ -125,7 +124,7 @@ fun ScanScreen() {
         onResult = { uri ->
             uri?.let { selectedImageUri ->
                 val qrText = decodeQRCodeFromImage(context, selectedImageUri) ?: ""
-                if (qrText != null) {
+                if (true) {
                     scanResult = qrText
                     Log.d("QRScan", "Scanned from image: $qrText")
                     resultAndSnack(qrText)
@@ -158,7 +157,10 @@ fun ScanScreen() {
             modifier = Modifier.fillMaxSize()
         ) {
             if (showAiAssistant) {
-                AiAssistantOverlay(scanResult) { showAiAssistant = false }
+                AiAssistantOverlay(
+                    scanResult,
+                    isAssistantOpen = showAiAssistant
+                ) { showAiAssistant = false }
             }
 
             AndroidView(
@@ -243,8 +245,9 @@ fun ScanScreen() {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth()
-                        .background(color = Color.Black.copy(alpha = 0.4f),shape = CircleShape)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(color = Color.Black.copy(alpha = 0.4f), shape = CircleShape)
                         .padding(8.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
@@ -259,17 +262,19 @@ fun ScanScreen() {
                             modifier = Modifier.size(32.dp)
                         )
                     }
-                    ElevatedButton(onClick = {
-                        imagePickerLauncher.launch("image/*") // Open image picker
-                    },
-                        modifier = Modifier.padding(8.dp)) {
+                    ElevatedButton(
+                        onClick = {
+                            imagePickerLauncher.launch("image/*") // Open image picker
+                        },
+                        modifier = Modifier.padding(8.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Filled.PhotoLibrary,
                             contentDescription = "Open galery",
                             modifier = Modifier
                                 .size(24.dp)
-                                .padding(end = 8.dp))
-                    }) {
+                                .padding(end = 8.dp)
+                        )
                         Text("Upload QR Code")
                     }
                 }
@@ -290,18 +295,14 @@ fun ScanScreen() {
 }
 fun decodeQRCodeFromImage(context: Context, imageUri: Uri): String? {
     try {
-        // Use ImageDecoder for decoding the image
         val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val source = ImageDecoder.createSource(context.contentResolver, imageUri)
-            ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
-                decoder.setAllocator(ImageDecoder.ALLOCATOR_SOFTWARE) // Force a non-hardware bitmap
-            }
+            val hwBitmap = ImageDecoder.decodeBitmap(source)
+            hwBitmap.copy(Bitmap.Config.ARGB_8888, true) // Convert from HARDWARE to mutable software bitmap
         } else {
             MediaStore.Images.Media.getBitmap(context.contentResolver, imageUri)
         }
 
-
-        // Convert to ZXing-compatible LuminanceSource
         val intArray = IntArray(bitmap.width * bitmap.height)
         bitmap.getPixels(intArray, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
 
@@ -314,6 +315,7 @@ fun decodeQRCodeFromImage(context: Context, imageUri: Uri): String? {
         return null
     }
 }
+
 
 
 // Function to decode QR code using ZXing
