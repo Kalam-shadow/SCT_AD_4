@@ -32,13 +32,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -89,6 +94,7 @@ fun ScanScreen() {
     var isTorchOn by remember { mutableStateOf(false) }
     var camera: Camera? by remember { mutableStateOf(null) }
     val coroutineScope = rememberCoroutineScope()
+    var showAiAssistant by remember { mutableStateOf(false) }
 
     fun resultAndSnack(it: String){
         coroutineScope.launch {
@@ -118,7 +124,7 @@ fun ScanScreen() {
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri ->
             uri?.let { selectedImageUri ->
-                val qrText = decodeQRCodeFromImage(context, selectedImageUri)
+                val qrText = decodeQRCodeFromImage(context, selectedImageUri) ?: ""
                 if (qrText != null) {
                     scanResult = qrText
                     Log.d("QRScan", "Scanned from image: $qrText")
@@ -151,6 +157,10 @@ fun ScanScreen() {
         Box(
             modifier = Modifier.fillMaxSize()
         ) {
+            if (showAiAssistant) {
+                AiAssistantOverlay(scanResult) { showAiAssistant = false }
+            }
+
             AndroidView(
                 modifier = Modifier
                     .fillMaxSize()
@@ -251,11 +261,30 @@ fun ScanScreen() {
                     }
                     ElevatedButton(onClick = {
                         imagePickerLauncher.launch("image/*") // Open image picker
+                    },
+                        modifier = Modifier.padding(8.dp)) {
+                        Icon(
+                            imageVector = Icons.Filled.PhotoLibrary,
+                            contentDescription = "Open galery",
+                            modifier = Modifier
+                                .size(24.dp)
+                                .padding(end = 8.dp))
                     }) {
                         Text("Upload QR Code")
                     }
                 }
             }
+            // Floating Action Button for AI Assistant
+            FloatingActionButton(
+                onClick = { showAiAssistant = true },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+            ) {
+                Icon(Icons.Filled.QuestionAnswer, contentDescription = "Ask AI")
+            }
+
+
         }
     }
 }

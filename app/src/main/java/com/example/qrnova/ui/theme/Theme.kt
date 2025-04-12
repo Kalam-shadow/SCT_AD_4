@@ -1,45 +1,81 @@
 package com.example.qrnova.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
+object ColorPalette {
+    val Purple40 = Color(0xFF6650a4)
+    val PurpleGrey40 = Color(0xFF625b71)
+    val Pink40 = Color(0xFF7D5260)
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    val Purple80 = Color(0xFFD0BCFF)
+    val PurpleGrey80 = Color(0xFFCCC2DC)
+    val Pink80 = Color(0xFFEFB8C8)
 
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
-)
+    val DarkBackground = Color(0xFF121212) // Dark gray background
+    val DarkSurface = Color(0xFF1E1E1E)
+    val LightBackground = Color(0xFFFFFFFF) // Light gray background
+    val LightSurface = Color(0xFFFAFAFA)
+    val LightPrimary = Color(0xFF4CAF50)
+    val DarkPrimary = Color(0xFFA5D6A7)
+    val OnLightPrimary = Color(0xFF000000)
+    val OnDarkPrimary = Color(0xFF000000)
+    val LightSecondary = Color(0xFF9575CD)
+    val DarkSecondary = Color(0xFFD1C4E9)
+
+    val LightColorScheme = lightColorScheme(
+        primary = LightPrimary,
+        secondary = LightSecondary,
+        tertiary = Pink40,
+        background = LightBackground,
+        surface = LightSurface,
+        onPrimary = OnLightPrimary,
+    )
+    val DarkColorScheme = darkColorScheme(
+        primary = DarkPrimary,
+        secondary = DarkSecondary,
+        tertiary = Pink80,
+        background = DarkBackground,
+        surface = DarkSurface,
+        onPrimary = OnDarkPrimary,
+    )
+}
+
+private val LocalCustomColors = staticCompositionLocalOf {
+    ColorPalette.LightColorScheme
+}
 
 @Composable
 fun QrnovaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
+    val colorScheme = getColorScheme(darkTheme, dynamicColor)
+
+    CompositionLocalProvider(LocalCustomColors provides colorScheme) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
+}
+
+@Composable
+fun getColorScheme(darkTheme: Boolean, dynamicColor: Boolean) : ColorScheme {
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
@@ -47,12 +83,14 @@ fun QrnovaTheme(
         }
 
         darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        else -> ColorPalette.LightColorScheme
     }
+    return colorScheme
+}
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+object QrnovaTheme {
+    val colors: ColorScheme
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalCustomColors.current
 }
