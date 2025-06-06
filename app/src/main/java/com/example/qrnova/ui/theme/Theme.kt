@@ -17,24 +17,49 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.qrnova.ui.theme.ColorPalette.DarkColorScheme
 
 object ColorPalette {
-    val Purple40 = Color(0xFF6650a4)
-    val PurpleGrey40 = Color(0xFF625b71)
+//    val Purple40 = Color(0xFF6650a4)
+//    val PurpleGrey40 = Color(0xFF625b71)
+//    val Pink40 = Color(0xFF7D5260)
+//
+//    val Purple80 = Color(0xFFD0BCFF)
+//    val PurpleGrey80 = Color(0xFFCCC2DC)
+//    val Pink80 = Color(0xFFEFB8C8)
+
+    val Purple40 = Color(0xFF81D4FA)
+    val PurpleGrey40 = Color(0xFF80DEEA)
     val Pink40 = Color(0xFF7D5260)
 
-    val Purple80 = Color(0xFFD0BCFF)
-    val PurpleGrey80 = Color(0xFFCCC2DC)
+    val Purple80 = Color(0xFF03A9F4)
+    val PurpleGrey80 = Color(0xFF00BCD4)
     val Pink80 = Color(0xFFEFB8C8)
 
-    val DarkBackground = Color(0xFF121212) // Dark gray background
-    val DarkSurface = Color(0xFF1E1E1E)
-    val LightBackground = Color(0xFFFFFFFF) // Light gray background
-    val LightSurface = Color(0xFFFAFAFA)
-    val LightPrimary = Color(0xFF4CAF50)
-    val DarkPrimary = Color(0xFFA5D6A7)
-    val OnLightPrimary = Color(0xFF000000)
-    val OnDarkPrimary = Color(0xFF000000)
-    val LightSecondary = Color(0xFF9575CD)
-    val DarkSecondary = Color(0xFFD1C4E9)
+
+//    val DarkBackground = Color(0xFF121212) // Dark gray background
+//    val DarkSurface = Color(0xFF1E1E1E)
+//    val LightBackground = Color(0xFFFFFFFF) // Light gray background
+//    val LightSurface = Color(0xFFFAFAFA)
+//    val LightPrimary = Color(0xFF4CAF50)
+//    val DarkPrimary = Color(0xFFA5D6A7)
+//    val OnLightPrimary = Color(0xFF000000)
+//    val OnDarkPrimary = Color(0xFF000000)
+//    val LightSecondary = Color(0xFF9575CD)
+//    val DarkSecondary = Color(0xFFD1C4E9)
+
+    val DarkBackground = Color(0xFF121212) // Same dark background
+    val DarkSurface = Color(0xFF1E1E1E)     // Same dark surface
+
+    val LightBackground = Color(0xFFFFFFFF) // Light background
+    val LightSurface = Color(0xFFFAFAFA)    // Light surface
+
+    val LightPrimary = Color(0xFF03A9F4)    // Sky Blue 500 (Light mode primary)
+    val DarkPrimary = Color(0xFF81D4FA)     // Sky Blue 200 (Dark mode primary)
+
+    val OnLightPrimary = Color(0xFFFFFFFF)  // White text/icons on blue
+    val OnDarkPrimary = Color(0xFF000000)   // Black text/icons on lighter blue
+
+    val LightSecondary = Color(0xFF00BCD4)  // Cyan 500 for accent
+    val DarkSecondary = Color(0xFF80DEEA)   // Cyan 200 for dark mode accent
+
 
     val LightColorScheme = lightColorScheme(
         primary = LightPrimary,

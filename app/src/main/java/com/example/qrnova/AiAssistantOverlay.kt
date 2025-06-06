@@ -38,7 +38,6 @@ data class AiMessage(val content: String, val isFromUser: Boolean)
 @Composable
 fun AiAssistantOverlay(
     lastScannedResult: String?,
-    isAssistantOpen: Boolean,
     onClose: () -> Unit
 ) {
     var userMessage by remember { mutableStateOf("") }

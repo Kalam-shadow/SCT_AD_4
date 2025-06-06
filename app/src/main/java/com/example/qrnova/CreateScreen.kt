@@ -1,5 +1,6 @@
 package com.example.qrnova
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -9,6 +10,7 @@ import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,7 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -30,7 +31,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,17 +39,22 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.set
+import androidx.lifecycle.ViewModel
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.MultiFormatWriter
 import com.google.zxing.common.BitMatrix
 import java.io.File
 import java.io.FileOutputStream
 
+data class QrState(val inputText: String = "", val qrBitmap: Bitmap? = null)
+
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateScreen() {
-    var inputText by remember { mutableStateOf("") }
-    var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
+fun CreateScreen(viewModel: QrViewModel) {
+    val qrState = viewModel.qrState
     val context = LocalContext.current
 
     Column(
@@ -66,93 +71,55 @@ fun CreateScreen() {
                 )
             }
         )
-        ElevatedCard(
-            modifier = Modifier.padding(16.dp)
+
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
         ) {
-            Column(
-                modifier = Modifier.padding(8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                OutlinedTextField(
-                    value = inputText,
-                    onValueChange = { inputText = it },
-                    label = { Text("Enter Text to Generate QR Code") },
-                    modifier = Modifier
-                      //  .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(4.dp)
-                        .fillMaxWidth()
-                )
+            val isLandscape = maxWidth > maxHeight
 
-                Spacer(modifier = Modifier.height(2.dp))
-
-                OutlinedButton(
-                    modifier = Modifier.fillMaxWidth()
-                        .padding(4.dp),
-                    onClick = {
-                        if (inputText.isNotEmpty()) {
-                            qrBitmap = generateQRCode(inputText)
+            val inputSection = @Composable {
+                QrInputField(
+                    inputText = qrState.inputText,
+                    onTextChange = { viewModel.updateText(it) },
+                    onGenerate = {
+                        if (qrState.inputText.isNotBlank()) {
+                            viewModel.generateQr()
                         } else {
                             Toast.makeText(context, "Enter text first", Toast.LENGTH_SHORT).show()
                         }
                     }
-                ) {
-                    Text("Generate QR Code")
-                }
+                )
             }
-        }
 
+            val displaySection = @Composable {
+                QrDisplayField(context, qrState.qrBitmap)
+            }
 
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        ElevatedCard(
-            modifier = Modifier.padding(16.dp)
-                .fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(8.dp)
-                    .fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-
-            ) {
-                if (qrBitmap == null){
-                    Text("No QR Code Generated")
-                    Spacer(modifier = Modifier.height(2.dp))
-                }
-                qrBitmap?.let { bitmap ->
-                    Text("QR Code Generated:")
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = "Generated QR Code",
-                        modifier = Modifier.size(200.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row {
-
-                        Button(
-                            onClick = {
-                                saveQRCodeToStorage(bitmap, context)
-                            }
-                        ) {
-                            Text("Save QR Code")
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        OutlinedButton(
-                            onClick = {
-                                qrBitmap?.let { bitmap -> shareQRCode(bitmap, context) }
-                            }
-                        ){
-                            Text("Share QR Code")
-                        }
+            if (isLandscape) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        inputSection()
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        displaySection()
                     }
                 }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                ) {
+                    inputSection()
+                    displaySection()
+                }
             }
         }
-
     }
 }
 
@@ -160,14 +127,106 @@ fun CreateScreen() {
 private fun generateQRCode(text: String): Bitmap {
     val size = 512
     val bitMatrix: BitMatrix = MultiFormatWriter().encode(text, BarcodeFormat.QR_CODE, size, size)
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
+    val bitmap = createBitmap(size, size, Bitmap.Config.RGB_565)
 
     for (x in 0 until size) {
         for (y in 0 until size) {
-            bitmap.setPixel(x, y, if (bitMatrix[x, y]) Color.BLACK else Color.WHITE)
+            bitmap[x, y] = if (bitMatrix[x, y]) Color.BLACK else Color.WHITE
         }
     }
     return bitmap
+}
+
+@Composable
+fun QrInputField(
+    inputText: String,
+    onTextChange: (String) -> Unit,
+    onGenerate: () -> Unit
+) {
+    ElevatedCard(
+        modifier = Modifier.padding(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            OutlinedTextField(
+                value = inputText,
+                onValueChange = { onTextChange(it)},
+                label = { Text("Enter Text to Generate QR Code") },
+                modifier = Modifier
+                    //  .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(4.dp)
+                    .fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            OutlinedButton(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(4.dp),
+                onClick = {
+                    onGenerate()
+                }
+            ) {
+                Text("Generate QR Code")
+            }
+        }
+    }
+}
+
+@Composable
+fun QrDisplayField(context : Context,qrBitmap : Bitmap?) {
+    ElevatedCard(
+        modifier = Modifier
+            .padding(16.dp)
+            .fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(8.dp)
+                .fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+
+        ) {
+            if (qrBitmap == null) {
+                Text("No QR Code Generated")
+                Spacer(modifier = Modifier.height(2.dp))
+            }
+            else {
+                Text("QR Code Generated:")
+                Spacer(modifier = Modifier.height(2.dp))
+                Image(
+                    bitmap = qrBitmap.asImageBitmap(),
+                    contentDescription = "Generated QR Code",
+                    modifier = Modifier.size(200.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row {
+
+                    Button(
+                        onClick = {
+                            saveQRCodeToStorage(qrBitmap, context)
+                        }
+                    ) {
+                        Text("Save QR Code")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            shareQRCode(qrBitmap, context)
+                        }
+                    ) {
+                        Text("Share QR Code")
+                    }
+                }
+            }
+        }
+    }
 }
 
 private fun shareQRCode(bitmap: Bitmap, context: Context) {
@@ -201,4 +260,19 @@ private fun saveQRCodeToStorage(bitmap: Bitmap, context: Context) {
     }
 
     Toast.makeText(context, "QR Code saved at ${file.absolutePath}", Toast.LENGTH_SHORT).show()
+}
+
+class QrViewModel : ViewModel() {
+    var qrState by mutableStateOf(QrState())
+        private set
+
+    fun updateText(newText: String) {
+        qrState = qrState.copy(inputText = newText, qrBitmap = null)
+    }
+
+    fun generateQr() {
+        if (qrState.inputText.isNotBlank()) {
+            qrState = qrState.copy(qrBitmap = generateQRCode(qrState.inputText))
+        }
+    }
 }

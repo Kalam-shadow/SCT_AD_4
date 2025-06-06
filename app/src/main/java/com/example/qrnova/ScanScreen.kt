@@ -23,26 +23,30 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.filled.QuestionAnswer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -80,7 +84,7 @@ import java.util.concurrent.Executors
 
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
-fun ScanScreen(qrText: String) {
+fun ScanScreen() {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
@@ -93,7 +97,6 @@ fun ScanScreen(qrText: String) {
     var isTorchOn by remember { mutableStateOf(false) }
     var camera: Camera? by remember { mutableStateOf(null) }
     val coroutineScope = rememberCoroutineScope()
-    var showAiAssistant by remember { mutableStateOf(false) }
 
     fun resultAndSnack(it: String){
         coroutineScope.launch {
@@ -156,12 +159,12 @@ fun ScanScreen(qrText: String) {
         Box(
             modifier = Modifier.fillMaxSize()
         ) {
-            if (showAiAssistant) {
-                AiAssistantOverlay(
-                    scanResult,
-                    isAssistantOpen = showAiAssistant
-                ) { showAiAssistant = false }
-            }
+//            if (showAiAssistant) {
+//                AiAssistantOverlay(
+//                    scanResult,
+//                    onClose = { showAiAssistant = false }
+//                )
+//            }
 
             AndroidView(
                 modifier = Modifier
@@ -235,60 +238,55 @@ fun ScanScreen(qrText: String) {
                     previewView
                 }
             )
-            // Bottom Action Bar (Torch)
-            Column(
+            Row(
                 modifier = Modifier
+//                    .offset(y = (-8).dp)
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(innerPadding),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .background(color = Color.Black.copy(alpha = 0.4f))
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(color = Color.Black.copy(alpha = 0.4f), shape = CircleShape)
-                        .padding(8.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                IconButton(onClick = {
+                    isTorchOn = !isTorchOn
+                    cameraControl?.enableTorch(isTorchOn)
+                }) {
+                    Icon(
+                        imageVector = if (isTorchOn) Icons.Filled.FlashOn else Icons.Filled.FlashOff,
+                        contentDescription = "Toggle Flash",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+                ElevatedButton(
+                    onClick = {
+                        imagePickerLauncher.launch("image/*") // Open image picker
+                    },
+                    colors = ButtonColors(
+                        containerColor = Color.Transparent,
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        disabledContainerColor = Color.LightGray,
+                        disabledContentColor = Color.DarkGray,
+                    ),
                 ) {
-                    IconButton(onClick = {
-                        isTorchOn = !isTorchOn
-                        cameraControl?.enableTorch(isTorchOn)
-                    }) {
-                        Icon(
-                            imageVector = if (isTorchOn) Icons.Filled.FlashOn else Icons.Filled.FlashOff,
-                            contentDescription = "Toggle Flash",
-                            tint = Color.White,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                    ElevatedButton(
-                        onClick = {
-                            imagePickerLauncher.launch("image/*") // Open image picker
-                        },
-                        modifier = Modifier.padding(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.PhotoLibrary,
-                            contentDescription = "Open galery",
-                            modifier = Modifier
-                                .size(24.dp)
-                                .padding(end = 8.dp)
-                        )
-                        Text("Upload QR Code")
-                    }
+                    Icon(
+                        imageVector = Icons.Filled.PhotoLibrary,
+                        contentDescription = "Select Image",
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Upload QR Code")
                 }
             }
-            // Floating Action Button for AI Assistant
-            FloatingActionButton(
-                onClick = { showAiAssistant = true },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp)
-            ) {
-                Icon(Icons.Filled.QuestionAnswer, contentDescription = "Ask AI")
-            }
-
+//            // Floating Action Button for AI Assistant
+//            FloatingActionButton(
+//                onClick = { showAiAssistant = true },
+//                modifier = Modifier
+//                    .align(Alignment.BottomEnd)
+//                    .padding(16.dp)
+//            ) {
+//                Icon(Icons.Filled.QuestionAnswer, contentDescription = "Ask AI")
+//            }
 
         }
     }
