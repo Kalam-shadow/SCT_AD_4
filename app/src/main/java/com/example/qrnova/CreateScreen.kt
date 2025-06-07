@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -97,6 +98,9 @@ fun CreateScreen(viewModel: QrViewModel) {
                 QrDisplayField(context, qrState.qrBitmap)
             }
 
+            val utilSection = @Composable {
+                QrUtilField(context, qrState.qrBitmap)
+            }
             if (isLandscape) {
                 Row(
                     modifier = Modifier
@@ -105,6 +109,7 @@ fun CreateScreen(viewModel: QrViewModel) {
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         inputSection()
+                        utilSection()
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         displaySection()
@@ -117,6 +122,7 @@ fun CreateScreen(viewModel: QrViewModel) {
                 ) {
                     inputSection()
                     displaySection()
+                    utilSection()
                 }
             }
         }
@@ -185,8 +191,8 @@ fun QrDisplayField(context : Context,qrBitmap : Bitmap?) {
     ) {
         Column(
             modifier = Modifier
-                .padding(8.dp)
-                .fillMaxSize(),
+                .padding(36.dp)
+                .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
 
@@ -204,31 +210,65 @@ fun QrDisplayField(context : Context,qrBitmap : Bitmap?) {
                     modifier = Modifier.size(200.dp)
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+//                Spacer(modifier = Modifier.height(16.dp))
 
-                Row {
-
-                    Button(
-                        onClick = {
-                            saveQRCodeToStorage(qrBitmap, context)
-                        }
-                    ) {
-                        Text("Save QR Code")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    OutlinedButton(
-                        onClick = {
-                            shareQRCode(qrBitmap, context)
-                        }
-                    ) {
-                        Text("Share QR Code")
-                    }
-                }
+//                Row {
+//
+//                    Button(
+//                        onClick = {
+//                            saveQRCodeToStorage(qrBitmap, context)
+//                        }
+//                    ) {
+//                        Text("Save QR Code")
+//                    }
+//                    Spacer(modifier = Modifier.width(8.dp))
+//                    OutlinedButton(
+//                        onClick = {
+//                            shareQRCode(qrBitmap, context)
+//                        }
+//                    ) {
+//                        Text("Share QR Code")
+//                    }
+//                }
             }
         }
     }
 }
 
+@Composable
+fun QrUtilField(context: Context, qrBitmap: Bitmap?) {
+    if (qrBitmap != null) {
+        ElevatedCard(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+        ) {
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Button(
+                    onClick = {
+                        saveQRCodeToStorage(qrBitmap, context)
+                    }
+                ) {
+                    Text("Save QR Code")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                OutlinedButton(
+                    onClick = {
+                        shareQRCode(qrBitmap, context)
+                    }
+                ) {
+                    Text("Share QR Code")
+                }
+            }
+        }
+    }
+}
 private fun shareQRCode(bitmap: Bitmap, context: Context) {
     val directory = File(context.cacheDir, "shared_qr")
     if (!directory.exists()) directory.mkdirs()
