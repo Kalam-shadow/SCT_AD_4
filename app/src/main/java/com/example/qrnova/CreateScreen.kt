@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.net.Uri
 import android.os.Environment
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -14,7 +15,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,6 +32,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,9 +55,10 @@ data class QrState(val inputText: String = "", val qrBitmap: Bitmap? = null)
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateScreen(viewModel: QrViewModel) {
+fun CreateScreen(viewModel: QrViewModel, historyViewModel: QrHistoryViewModel) {
     val qrState = viewModel.qrState
     val context = LocalContext.current
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
 
     Column(
         modifier = Modifier
@@ -87,6 +89,11 @@ fun CreateScreen(viewModel: QrViewModel) {
                     onGenerate = {
                         if (qrState.inputText.isNotBlank()) {
                             viewModel.generateQr()
+                            qrState.qrBitmap?.let { bitmap ->
+                                imageUri = storeQRCode(bitmap, context)
+                                historyViewModel.addCreated(qrState.inputText, imageUri.toString())
+                            } ?: Toast.makeText(context, "Failed to generate QR", Toast.LENGTH_SHORT).show()
+                            historyViewModel.addCreated(qrState.inputText, imageUri.toString())
                         } else {
                             Toast.makeText(context, "Enter text first", Toast.LENGTH_SHORT).show()
                         }
@@ -95,7 +102,7 @@ fun CreateScreen(viewModel: QrViewModel) {
             }
 
             val displaySection = @Composable {
-                QrDisplayField(context, qrState.qrBitmap)
+                QrDisplayField(qrState.qrBitmap)
             }
 
             val utilSection = @Composable {
@@ -183,7 +190,7 @@ fun QrInputField(
 }
 
 @Composable
-fun QrDisplayField(context : Context,qrBitmap : Bitmap?) {
+fun QrDisplayField(qrBitmap : Bitmap?) {
     ElevatedCard(
         modifier = Modifier
             .padding(16.dp)
@@ -288,6 +295,24 @@ private fun shareQRCode(bitmap: Bitmap, context: Context) {
     context.startActivity(Intent.createChooser(shareIntent, "Share QR Code"))
 }
 
+// personal Storage
+private fun storeQRCode(bitmap: Bitmap, context: Context): Uri? {
+    val directory = File(context.filesDir, "QRNova")
+    if (!directory.exists()) {
+        directory.mkdirs()
+    }
+    val nomediaFile = File(directory, ".nomedia")
+    if (!nomediaFile.exists()) {
+        nomediaFile.createNewFile()
+    }
+    val file = File(directory, "QRCode_${System.currentTimeMillis()}.png")
+    FileOutputStream(file).use { out ->
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+        out.flush()
+    }
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+    return uri // Return the URI for further use, e.g., sharing
+}
 // Function to Save QR Code to Storage
 private fun saveQRCodeToStorage(bitmap: Bitmap, context: Context) {
     val directory = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "QRNova")

@@ -2,6 +2,7 @@ package com.example.qrnova
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -29,17 +30,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.core.view.WindowCompat
+import androidx.navigation.NavDestination
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 
 import com.example.qrnova.ui.theme.QrnovaTheme
-import java.nio.file.WatchEvent
 
 class MainActivity : ComponentActivity() {
 
     private var initialSharedImageUri: Uri? = null
     private val viewModel: QrViewModel by viewModels()
+    private val historyViewModel: QrHistoryViewModel by viewModels()
 
 
     @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -56,7 +58,9 @@ class MainActivity : ComponentActivity() {
             QrnovaTheme {
                 val navController = rememberNavController()
                 val scanResult = remember { mutableStateOf("") }
-                val isPortrait = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT
+                val isPortrait = resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+                val historyViewModel = QrHistoryViewModel(application)
+
 
                 // Decode image only once on start
                 LaunchedEffect(Unit) {
@@ -95,7 +99,7 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 composable(NavRoute.Scanner.route) {
-                                    QRscanScreen()
+                                    QRscanScreen(historyViewModel)
                                 }
                                 composable(NavRoute.Creator.route) {
                                     QRcreateScreen()
@@ -122,7 +126,7 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 composable(NavRoute.Scanner.route) {
-                                    QRscanScreen()
+                                    QRscanScreen(historyViewModel)
                                 }
                                 composable(NavRoute.Creator.route) {
                                     QRcreateScreen()
@@ -180,7 +184,12 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                             SmallFloatingActionButton(
-                                onClick = {},
+                                onClick = {
+                                    val historyIntent = Intent(this@MainActivity, HistoryActivity::class.java).apply {
+                                        putExtra("scanResult", scanResult.value)
+                                    }
+                                    startActivity(historyIntent)
+                                },
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
                                 modifier = Modifier.align(Alignment.Center)
                             ) {
@@ -202,18 +211,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-//    fun onNewIntent(intent: Intent?) {
-//        intent?.let { super.onNewIntent(it) }
-//        intent?.let {
-//            val newImageUri = getSharedImageUri(it)
-//            newImageUri?.let { uri ->
-//                val qrText = decodeQRCodeFromImage(this, uri) ?: ""
-//                Log.d("QRnova", "Decoded on new intent: $qrText")
-//                // TODO: Hook this into a ViewModel or shared state if you want to update dynamically
-//            }
-//        }
-//    }
-
     private fun getSharedImageUri(intent: Intent?): Uri? {
         return if (intent?.action == Intent.ACTION_SEND && intent.type?.startsWith("image/") == true) {
             intent.getParcelableExtra(Intent.EXTRA_STREAM)
@@ -225,7 +222,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun BottomNavigationBar(
         navController: NavHostController,
-        currentDestination: androidx.navigation.NavDestination?,
+        currentDestination: NavDestination?,
         topLevelRoutes: List<TopLevelRoute>
     ) {
         Box(
@@ -269,7 +266,10 @@ class MainActivity : ComponentActivity() {
             // History toggle button
 
             FloatingActionButton(
-                onClick = {},
+                onClick = {
+                    val historyIntent = Intent(this@MainActivity, HistoryActivity::class.java)
+                    startActivity(historyIntent)
+                },
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -298,8 +298,8 @@ class MainActivity : ComponentActivity() {
 
     @RequiresApi(Build.VERSION_CODES.R)
     @Composable
-    fun QRscanScreen() {
-        ScanScreen() // Make ScanScreen accept this
+    fun QRscanScreen(historyViewModel: QrHistoryViewModel) {
+        ScanScreen(historyViewModel) // Make ScanScreen accept this
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -317,6 +317,6 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun QRcreateScreen() {
-        CreateScreen(viewModel) // Make CreateScreen accept this
+        CreateScreen(viewModel, historyViewModel) // Make CreateScreen accept this
     }
 }
