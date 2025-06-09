@@ -5,8 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Environment
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -30,6 +32,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,6 +63,16 @@ fun CreateScreen(viewModel: QrViewModel, historyViewModel: QrHistoryViewModel) {
     val context = LocalContext.current
     var imageUri by remember { mutableStateOf<Uri?>(null) }
 
+    LaunchedEffect(qrState.qrBitmap) {
+        if(qrState.qrBitmap != null) {
+            qrState.qrBitmap.let { bitmap ->
+                imageUri = storeQRCode(bitmap, context)
+                historyViewModel.addCreated(qrState.inputText, imageUri.toString())
+                Log.d("CreateScreen", "QR Code saved with URI: $imageUri")
+            }
+            historyViewModel.addCreated(qrState.inputText, imageUri.toString())
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -89,11 +102,6 @@ fun CreateScreen(viewModel: QrViewModel, historyViewModel: QrHistoryViewModel) {
                     onGenerate = {
                         if (qrState.inputText.isNotBlank()) {
                             viewModel.generateQr()
-                            qrState.qrBitmap?.let { bitmap ->
-                                imageUri = storeQRCode(bitmap, context)
-                                historyViewModel.addCreated(qrState.inputText, imageUri.toString())
-                            } ?: Toast.makeText(context, "Failed to generate QR", Toast.LENGTH_SHORT).show()
-                            historyViewModel.addCreated(qrState.inputText, imageUri.toString())
                         } else {
                             Toast.makeText(context, "Enter text first", Toast.LENGTH_SHORT).show()
                         }
@@ -216,27 +224,6 @@ fun QrDisplayField(qrBitmap : Bitmap?) {
                     contentDescription = "Generated QR Code",
                     modifier = Modifier.size(200.dp)
                 )
-
-//                Spacer(modifier = Modifier.height(16.dp))
-
-//                Row {
-//
-//                    Button(
-//                        onClick = {
-//                            saveQRCodeToStorage(qrBitmap, context)
-//                        }
-//                    ) {
-//                        Text("Save QR Code")
-//                    }
-//                    Spacer(modifier = Modifier.width(8.dp))
-//                    OutlinedButton(
-//                        onClick = {
-//                            shareQRCode(qrBitmap, context)
-//                        }
-//                    ) {
-//                        Text("Share QR Code")
-//                    }
-//                }
             }
         }
     }
@@ -311,6 +298,7 @@ private fun storeQRCode(bitmap: Bitmap, context: Context): Uri? {
         out.flush()
     }
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+    Log.d("FileProviderDebug", "Saving file to: ${file.absolutePath}")
     return uri // Return the URI for further use, e.g., sharing
 }
 // Function to Save QR Code to Storage
@@ -324,6 +312,10 @@ private fun saveQRCodeToStorage(bitmap: Bitmap, context: Context) {
         out.flush()
     }
 
+    // Trigger Media Scanner to make image visible in Gallery under "QRNova_Album"
+    MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), arrayOf("image/jpeg")) { path, uri ->
+        println("Image saved and scanned: $path -> $uri")
+    }
     Toast.makeText(context, "QR Code saved at ${file.absolutePath}", Toast.LENGTH_SHORT).show()
 }
 
@@ -341,3 +333,5 @@ class QrViewModel : ViewModel() {
         }
     }
 }
+
+
