@@ -81,4 +81,13 @@ dependencies {
     //image
     implementation(libs.coil.compose)
 
+    //pager + Tabrow
+    implementation(libs.material3)
+    implementation(libs.androidx.foundation)
+    implementation(libs.androidx.runtime.livedata)
+    implementation(libs.androidx.ui.util)
+    implementation(libs.androidx.material.v151)
+    implementation(libs.accompanist.pager)
+
+
 }

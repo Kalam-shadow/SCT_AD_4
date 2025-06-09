@@ -5,34 +5,53 @@ import android.util.Patterns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Button
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.qrnova.ui.theme.QrnovaTheme
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBar
-import androidx.compose.ui.text.font.FontWeight
 import coil.compose.rememberAsyncImagePainter
+import com.example.qrnova.ui.theme.QrnovaTheme
+import com.google.accompanist.pager.HorizontalPager
+import com.google.accompanist.pager.rememberPagerState
+import kotlinx.coroutines.launch
 import java.util.Date
 
 
@@ -55,7 +74,16 @@ class HistoryActivity : ComponentActivity() {
                                     text = "QR Nova",
                                     fontWeight = FontWeight.Bold
                                 )
+                            },
+                            actions = {
+                                IconButton(onClick = {
+                                    // Handle close action
+                                    finish()
+                                }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Close")
+                                }
                             }
+
                         )
                     },
                     modifier = Modifier.fillMaxSize(),
@@ -68,11 +96,10 @@ class HistoryActivity : ComponentActivity() {
                     ) {
                         if (scannedResult != null && isPlainText(scannedResult)) {
                             PlainTextResultView(
-                                result = scannedResult,
-                                onClose = { finish() }
+                                result = scannedResult
                             )
                         }
-                        HistoryScreen(viewModel = viewModel, onClose = { finish() })
+                        HistoryScreen(viewModel = viewModel)
                     }
                 }
             }
@@ -91,96 +118,212 @@ class HistoryActivity : ComponentActivity() {
 }
 
 @Composable
-fun PlainTextResultView(result: String, onClose: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = "Scanned Text",
-            style = MaterialTheme.typography.titleLarge
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = result,
-            fontSize = 18.sp,
-            modifier = Modifier.weight(1f)
-        )
-
-        Button(
-            onClick = onClose,
-            modifier = Modifier.fillMaxWidth()
+fun PlainTextResultView(result: String) {
+    ElevatedCard {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Close")
+            Text(
+                text = "Scanned Text",
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = result,
+                fontSize = 18.sp,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
+
 
 @Composable
-fun HistoryScreen(viewModel: QrHistoryViewModel, onClose: () -> Unit) {
-    var showScanned by remember { mutableStateOf(true) }
+fun HistoryScreen(viewModel: QrHistoryViewModel) {
+    val pagerState = rememberPagerState(initialPage = 0)
+    val coroutineScope = rememberCoroutineScope()
+
+    val tabs = listOf("Scanned", "Created")
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(8.dp),
     ) {
-        Text(
-            text = if (showScanned) "Scanned QR History" else "Created QR History",
-            style = MaterialTheme.typography.titleSmall
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = { showScanned = !showScanned },
-            modifier = Modifier.fillMaxWidth()
+        TabRow(
+            selectedTabIndex = pagerState.currentPage,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.primary
         ) {
-            Text(if (showScanned) "Switch to Created History" else "Switch to Scanned History")
+            tabs.forEachIndexed { index, title ->
+                Tab(
+                    selected = pagerState.currentPage == index,
+                    onClick = {
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(index)
+                        }
+                    },
+                    text = {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (showScanned) {
-            ScannedHistoryScreen(viewModel)
-        } else {
-            CreatedHistoryScreen(viewModel)
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = onClose,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Close")
+        HorizontalPager(
+            count = tabs.size,
+            state = pagerState,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
+            when (page) {
+                0 -> ScannedHistoryScreen(viewModel)
+                1 -> CreatedHistoryScreen(viewModel)
+            }
         }
     }
 }
-
 
 @Composable
 fun ScannedHistoryScreen(viewModel: QrHistoryViewModel) {
     val history by viewModel.scannedHistory.collectAsState()
-    LazyColumn {
-        items(history) { item ->
-            Text(text = "QR: ${item.content}")
-            Text("Time: ${Date(item.timestamp)}")
+    ElevatedCard {
+        if (history.isEmpty()) {
+            Text("No scanned QR codes yet.")
+        } else {
+            LazyColumn {
+                items(history) { item ->
+                    Text(text = "QR: ${item.content}")
+                    Text("Time: ${Date(item.timestamp)}")
+                }
+            }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreatedHistoryScreen(viewModel: QrHistoryViewModel) {
     val history by viewModel.createdHistory.collectAsState()
-    LazyColumn {
-        items(history) { item ->
-            Text("QR: ${item.content}")
-            Image(painter = rememberAsyncImagePainter(item.imageUri), contentDescription = null)
-            Text("Saved at: ${Date(item.timestamp)}")
+    val selectedItems = remember { mutableStateListOf<String>() }
+    val inSelectionMode = selectedItems.isNotEmpty()
+    val context = LocalContext.current
+
+    Scaffold(
+        topBar = {
+            if (inSelectionMode) {
+                TopAppBar(
+                    title = { Text("${selectedItems.size} selected") },
+                    actions = {
+                        IconButton(onClick = {
+                            // Handle select all logic
+                            if (selectedItems.size == history.size) {
+                                selectedItems.clear()
+                            } else {
+                                toggleAllItems(selectedItems, history.map { it.imageUri })
+                            }
+                        }) {
+                            Icon(Icons.Default.SelectAll, contentDescription = "Select All")
+                        }
+                        IconButton(onClick = {
+                            // Handle share logic
+                            viewModel.shareQrCodes(context,selectedItems)
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = "Share")
+                        }
+
+                        IconButton(onClick = {
+                            // Handle delete logic
+                            viewModel.deleteQrCodes(selectedItems)
+                            selectedItems.clear()
+                        }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete")
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { selectedItems.clear() }) {
+                            Icon(Icons.Default.Close, contentDescription = "Cancel")
+                        }
+                    }
+                )
+            }
+        }
+    ) { padding ->
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            if (history.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No created QR codes yet.")
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(history) { item ->
+                        val isSelected = selectedItems.contains(item.imageUri)
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                    else MaterialTheme.colorScheme.surface
+                                )
+                                .combinedClickable(
+                                    onClick = {
+                                        if (inSelectionMode) {
+                                            toggleItem(selectedItems, item.imageUri)
+                                        }
+                                    },
+                                    onLongClick = {
+                                        toggleItem(selectedItems, item.imageUri)
+                                    }
+                                ),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Image(
+                                painter = rememberAsyncImagePainter(item.imageUri),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .padding(end = 8.dp)
+                            )
+
+                            Column {
+                                Text("QR: ${item.content}")
+                                Text("Saved at: ${Date(item.timestamp)}")
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
+
+private fun toggleAllItems(list: MutableList<String>, items: List<String>) {
+    items.forEach { item ->
+        list.add(item)
+    }
+}
+
+private fun toggleItem(list: MutableList<String>, item: String) {
+    if (list.contains(item)) list.remove(item) else list.add(item)
+}
+

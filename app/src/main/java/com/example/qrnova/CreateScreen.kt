@@ -67,7 +67,6 @@ fun CreateScreen(viewModel: QrViewModel, historyViewModel: QrHistoryViewModel) {
         if(qrState.qrBitmap != null) {
             qrState.qrBitmap.let { bitmap ->
                 imageUri = storeQRCode(bitmap, context)
-                historyViewModel.addCreated(qrState.inputText, imageUri.toString())
                 Log.d("CreateScreen", "QR Code saved with URI: $imageUri")
             }
             historyViewModel.addCreated(qrState.inputText, imageUri.toString())
