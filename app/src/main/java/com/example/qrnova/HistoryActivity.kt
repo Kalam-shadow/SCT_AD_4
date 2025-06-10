@@ -1,5 +1,6 @@
 package com.example.qrnova
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Patterns
 import androidx.activity.ComponentActivity
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -30,6 +32,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -37,8 +40,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -181,6 +185,8 @@ fun HistoryScreen(viewModel: QrHistoryViewModel) {
             count = tabs.size,
             state = pagerState,
             modifier = Modifier.fillMaxSize()
+                .padding(16.dp)
+                .background(MaterialTheme.colorScheme.background)
         ) { page ->
             when (page) {
                 0 -> ScannedHistoryScreen(viewModel)
@@ -207,18 +213,19 @@ fun ScannedHistoryScreen(viewModel: QrHistoryViewModel) {
     }
 }
 
+@SuppressLint("MutableCollectionMutableState")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreatedHistoryScreen(viewModel: QrHistoryViewModel) {
     val history by viewModel.createdHistory.collectAsState()
-    val selectedItems = remember { mutableStateListOf<String>() }
-    val inSelectionMode = selectedItems.isNotEmpty()
+    val selectedItems = remember { mutableStateSetOf<String>() }
+    val inSelectionMode by remember { derivedStateOf { selectedItems.isNotEmpty() } }
     val context = LocalContext.current
 
     Scaffold(
         topBar = {
             if (inSelectionMode) {
-                TopAppBar(
+                MediumTopAppBar(
                     title = { Text("${selectedItems.size} selected") },
                     actions = {
                         IconButton(onClick = {
@@ -255,7 +262,7 @@ fun CreatedHistoryScreen(viewModel: QrHistoryViewModel) {
             }
         }
     ) { padding ->
-        ElevatedCard(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
@@ -277,14 +284,9 @@ fun CreatedHistoryScreen(viewModel: QrHistoryViewModel) {
                     items(history) { item ->
                         val isSelected = selectedItems.contains(item.imageUri)
 
-                        Row(
+                        ElevatedCard(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp)
-                                .background(
-                                    if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                    else MaterialTheme.colorScheme.surface
-                                )
+                                .padding(bottom = 6.dp)
                                 .combinedClickable(
                                     onClick = {
                                         if (inSelectionMode) {
@@ -295,19 +297,34 @@ fun CreatedHistoryScreen(viewModel: QrHistoryViewModel) {
                                         toggleItem(selectedItems, item.imageUri)
                                     }
                                 ),
-                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Image(
-                                painter = rememberAsyncImagePainter(item.imageUri),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(64.dp)
-                                    .padding(end = 8.dp)
-                            )
-
-                            Column {
-                                Text("QR: ${item.content}")
-                                Text("Saved at: ${Date(item.timestamp)}")
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .padding(8.dp)
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                        else MaterialTheme.colorScheme.surface
+                                    ),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Image(
+                                    painter = rememberAsyncImagePainter(item.imageUri),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .padding(end = 8.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(text = "QR: ${item.content}",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(text = "Saved at: ${Date(item.timestamp)}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontSize = 12.sp
+                                    )
+                                }
                             }
                         }
                     }
@@ -317,13 +334,12 @@ fun CreatedHistoryScreen(viewModel: QrHistoryViewModel) {
     }
 }
 
-private fun toggleAllItems(list: MutableList<String>, items: List<String>) {
-    items.forEach { item ->
-        list.add(item)
-    }
+private fun toggleAllItems(set: MutableSet<String>, items: List<String>) {
+    set.clear()
+    set.addAll(items)
 }
 
-private fun toggleItem(list: MutableList<String>, item: String) {
-    if (list.contains(item)) list.remove(item) else list.add(item)
+private fun toggleItem(set: MutableSet<String>, item: String) {
+    if (!set.add(item)) set.remove(item)
 }
 

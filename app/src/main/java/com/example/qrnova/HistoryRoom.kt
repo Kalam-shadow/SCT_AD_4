@@ -3,8 +3,6 @@ package com.example.qrnova
 import android.app.Application
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.Dao
@@ -128,14 +126,14 @@ class QrHistoryViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch { repo.insertCreated(content, imageUri) }
     }
 
-    fun deleteQrCodes(selectedItems: SnapshotStateList<String>) {
+    fun deleteQrCodes(selectedItems: MutableSet<String>) {
         viewModelScope.launch {
             repo.deleteCreatedQrsByUris(selectedItems.toList())
             selectedItems.clear()
         }
     }
 
-    fun shareQrCodes(context: Context, selectedItems: SnapshotStateList<String>) {
+    fun shareQrCodes(context: Context, selectedItems: MutableSet<String>) {
         val uris = selectedItems.map { it.toUri() }
 
         val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
