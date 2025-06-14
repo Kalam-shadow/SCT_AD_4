@@ -48,9 +48,14 @@ interface QrHistoryDao {
     @Delete
     suspend fun deleteCreatedQr(qr: CreatedQrEntity)
 
+    @Delete
+    suspend fun deleteScannedQr(qr: ScannedQrEntity)
+
     @Query("SELECT * FROM created_qr WHERE imageUri IN (:uris)")
     suspend fun getCreatedByUris(uris: List<String>): List<CreatedQrEntity>
 
+    @Query("SELECT * FROM scanned_qr WHERE content IN (:contents)")
+    suspend fun getScannedByContents(contents: List<String>): List<ScannedQrEntity>
 
     @Query("SELECT * FROM scanned_qr ORDER BY timestamp DESC")
     fun getAllScanned(): Flow<List<ScannedQrEntity>>
@@ -88,6 +93,13 @@ class QrRepository(private val dao: QrHistoryDao) {
         dao.insertCreated(
             CreatedQrEntity(content = content, imageUri = imageUri, timestamp = System.currentTimeMillis())
         )
+    }
+
+    suspend fun deleteScannedQr(contents: List<String>) {
+        val items = dao.getScannedByContents(contents)
+        items.forEach { qr ->
+            dao.deleteScannedQr(qr)
+        }
     }
 
     suspend fun deleteCreatedQrsByUris(uris: List<String>) {
@@ -133,6 +145,12 @@ class QrHistoryViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun deleteScannedQr(selectedItems: MutableSet<String>) {
+        viewModelScope.launch {
+            repo.deleteScannedQr(selectedItems.toList())
+        }
+    }
+
     fun shareQrCodes(context: Context, selectedItems: MutableSet<String>) {
         val uris = selectedItems.map { it.toUri() }
 
@@ -143,6 +161,18 @@ class QrHistoryViewModel(application: Application) : AndroidViewModel(applicatio
         }
 
         val chooser = Intent.createChooser(intent, "Share QR codes")
+        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(chooser)
+    }
+
+    fun shareScannedQrCodes(context: Context, selectedItems: MutableSet<String>) {
+        val contents = selectedItems.toList()
+        val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+            type = "text/plain"
+            putStringArrayListExtra(Intent.EXTRA_TEXT, ArrayList(contents))
+        }
+
+        val chooser = Intent.createChooser(intent, "Share Scanned QR codes")
         chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(chooser)
     }

@@ -1,7 +1,6 @@
 package com.example.qrnova
 
 import android.Manifest
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -10,6 +9,7 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.provider.Settings
 import android.util.Log
 import android.util.Patterns
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -27,17 +27,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
-import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.Icon
@@ -50,6 +52,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -71,7 +74,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.MultiFormatReader
-import com.google.zxing.NotFoundException
 import com.google.zxing.PlanarYUVLuminanceSource
 import com.google.zxing.RGBLuminanceSource
 import com.google.zxing.common.HybridBinarizer
@@ -80,7 +82,7 @@ import java.util.concurrent.Executors
 
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
-fun ScanScreen(viewModel: QrHistoryViewModel) {
+fun ScanScreen(viewModel: QrHistoryViewModel, activity: MainActivity) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
@@ -93,6 +95,14 @@ fun ScanScreen(viewModel: QrHistoryViewModel) {
     var isTorchOn by remember { mutableStateOf(false) }
     var camera: Camera? by remember { mutableStateOf(null) }
     val coroutineScope = rememberCoroutineScope()
+    val permissionGranted = remember { mutableStateOf(false) }
+    val showPermissionDeniedUI = remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            cameraExecutor.shutdown()
+        }
+    }
 
     fun resultAndSnack(it: String){
         coroutineScope.launch {
@@ -136,155 +146,187 @@ fun ScanScreen(viewModel: QrHistoryViewModel) {
         }
     )
 
-    // Handle Camera Permission
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        permissionGranted.value = isGranted
+        showPermissionDeniedUI.value = !isGranted
+    }
+
     LaunchedEffect(Unit) {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                context as Activity,
-                arrayOf(Manifest.permission.CAMERA),
-                101
-            )
+        val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        if (hasPermission) {
+            permissionGranted.value = true
+        } else {
+            if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA)) {
+                showPermissionDeniedUI.value = true
+            } else {
+                permissionLauncher.launch(Manifest.permission.CAMERA)
+            }
         }
     }
 
     Scaffold (
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) {innerPadding ->
-        Box(
-            modifier = Modifier.fillMaxSize()
-        ) {
-//            if (showAiAssistant) {
-//                AiAssistantOverlay(
-//                    scanResult,
-//                    onClose = { showAiAssistant = false }
-//                )
-//            }
-
-            AndroidView(
+        if (showPermissionDeniedUI.value) {
+            // Show permission denied UI
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, _, zoom, _ ->
-                            isGestureZoom = true
-                            val newZoom = (zoomState * zoom).coerceIn(0.5f, 9f)
-                            zoomState = newZoom
-                            cameraControl?.setZoomRatio(newZoom)
+                    .padding(innerPadding)
+                    .background(Color.White),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "Camera permission is permanently denied.",
+                        color = Color.Red,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    ElevatedButton(
+                        onClick = {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = "package:${context.packageName}".toUri()
+                            }
+                            context.startActivity(intent)
                         }
-                    },
-                factory = { androidViewContext ->
-                    val previewView = PreviewView(androidViewContext)
+                    ) {
+                        Text("Open App Settings")
+                    }
+                }
 
-                    val cameraProviderFuture: ListenableFuture<ProcessCameraProvider> =
-                        ProcessCameraProvider.getInstance(androidViewContext)
+            }
+            return@Scaffold
+        }else if(permissionGranted.value) {
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                AndroidView(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            detectTransformGestures { _, _, zoom, _ ->
+                                isGestureZoom = true
+                                val newZoom = (zoomState * zoom).coerceIn(0.5f, 9f)
+                                zoomState = newZoom
+                                cameraControl?.setZoomRatio(newZoom)
+                            }
+                        },
+                    factory = { androidViewContext ->
+                        val previewView = PreviewView(androidViewContext)
 
-                    cameraProviderFuture.addListener({
-                        val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
-                        val preview = Preview.Builder().build().also {
-                            it.surfaceProvider = previewView.surfaceProvider
-                        }
+                        val cameraProviderFuture: ListenableFuture<ProcessCameraProvider> =
+                            ProcessCameraProvider.getInstance(androidViewContext)
 
-                        val imageAnalysis = ImageAnalysis.Builder()
-                            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                            .build()
-
-                        val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
-                        try {
-                            cameraProvider.unbindAll()
-                            camera = cameraProvider.bindToLifecycle(
-                                lifecycleOwner,
-                                cameraSelector,
-                                preview,
-                                imageAnalysis
-                            )
-
-                            cameraControl = camera!!.cameraControl
-                            cameraControl?.setZoomRatio(1.2f)
-
-                            imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
-                                try {
-                                    val result = scanQRCode(imageProxy)
-                                    result?.let {
-                                        if (!snackbarState) {
-                                            scanResult = it
-                                            viewModel.addScanned(it)
-                                            Log.d("QRScan", "QR Code detected: $it")
-                                            resultAndSnack(it)
-
-
-                                            if (zoomState < 2f) {
-                                                zoomState += 0.1f
-                                                cameraControl?.setZoomRatio(zoomState)
-                                            }
-                                        }
-                                    }
-                                } catch (e: Exception) {
-                                    Log.e("QRScan", "QR Code scanning error", e)
-                                } finally {
-                                    imageProxy.close()
-                                }
+                        cameraProviderFuture.addListener({
+                            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
+                            val preview = Preview.Builder().build().also {
+                                it.surfaceProvider = previewView.surfaceProvider
                             }
 
-                        } catch (exc: Exception) {
-                            Log.e("QRScan", "Use case binding failed", exc)
-                        }
-                    }, ContextCompat.getMainExecutor(androidViewContext))
+                            val imageAnalysis = ImageAnalysis.Builder()
+                                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                                .build()
 
-                    previewView
-                }
-            )
-            Row(
-                modifier = Modifier
-//                    .offset(y = (-8).dp)
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .background(color = Color.Black.copy(alpha = 0.4f))
-                    .padding(8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-            ) {
-                IconButton(onClick = {
-                    isTorchOn = !isTorchOn
-                    cameraControl?.enableTorch(isTorchOn)
-                }) {
-                    Icon(
-                        imageVector = if (isTorchOn) Icons.Filled.FlashOn else Icons.Filled.FlashOff,
-                        contentDescription = "Toggle Flash",
-                        tint = Color.White,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-                ElevatedButton(
-                    onClick = {
-                        imagePickerLauncher.launch("image/*") // Open image picker
-                    },
-                    colors = ButtonColors(
-                        containerColor = Color.Transparent,
-                        contentColor = MaterialTheme.colorScheme.primary,
-                        disabledContainerColor = Color.LightGray,
-                        disabledContentColor = Color.DarkGray,
-                    ),
+                            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+                            try {
+                                cameraProvider.unbindAll()
+                                camera = cameraProvider.bindToLifecycle(
+                                    lifecycleOwner,
+                                    cameraSelector,
+                                    preview,
+                                    imageAnalysis
+                                )
+
+                                cameraControl = camera!!.cameraControl
+                                cameraControl?.setZoomRatio(1.2f)
+
+                                imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
+                                    try {
+                                        val result = scanQRCode(imageProxy)
+
+                                        result?.let {
+                                            if (!snackbarState) {
+                                                scanResult = it
+                                                viewModel.addScanned(it)
+                                                Log.d("QRScan", "QR Code detected: $it")
+                                                resultAndSnack(it)
+
+
+                                                if (zoomState < 2f) {
+                                                    zoomState += 0.1f
+                                                    cameraControl?.setZoomRatio(zoomState)
+                                                }
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e("QRScan", "QR Code scanning error", e)
+                                    } finally {
+                                        imageProxy.close()
+                                    }
+                                }
+
+                            } catch (exc: Exception) {
+                                Log.e("QRScan", "Use case binding failed", exc)
+                            }
+                        }, ContextCompat.getMainExecutor(androidViewContext))
+
+                        previewView
+                    }
+                )
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .background(color = Color.Black.copy(alpha = 0.4f))
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.PhotoLibrary,
-                        contentDescription = "Select Image",
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Upload QR Code")
+                    IconButton(onClick = {
+                        isTorchOn = !isTorchOn
+                        cameraControl?.enableTorch(isTorchOn)
+                    }) {
+                        Icon(
+                            imageVector = if (isTorchOn) Icons.Filled.FlashOn else Icons.Filled.FlashOff,
+                            contentDescription = "Toggle Flash",
+                            tint = Color.White,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    ElevatedButton(
+                        onClick = {
+                            imagePickerLauncher.launch("image/*") // Open image picker
+                        },
+                        colors = ButtonColors(
+                            containerColor = Color.Transparent,
+                            contentColor = MaterialTheme.colorScheme.primary,
+                            disabledContainerColor = Color.LightGray,
+                            disabledContentColor = Color.DarkGray,
+                        ),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Image,
+                            contentDescription = "Select Image",
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Upload QR Code")
+                    }
                 }
             }
-//            // Floating Action Button for AI Assistant
-//            FloatingActionButton(
-//                onClick = { showAiAssistant = true },
-//                modifier = Modifier
-//                    .align(Alignment.BottomEnd)
-//                    .padding(16.dp)
-//            ) {
-//                Icon(Icons.Filled.QuestionAnswer, contentDescription = "Ask AI")
-//            }
-
+        }else {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Requesting camera permission…")
+            }
         }
     }
 }
@@ -312,7 +354,6 @@ fun decodeQRCodeFromImage(context: Context, imageUri: Uri): String? {
 }
 
 
-
 // Function to decode QR code using ZXing
 private fun scanQRCode(imageProxy: ImageProxy): String? {
     val buffer = imageProxy.planes[0].buffer
@@ -326,8 +367,9 @@ private fun scanQRCode(imageProxy: ImageProxy): String? {
 
     return try {
         MultiFormatReader().decode(binaryBitmap).text
-    } catch (_: NotFoundException) {
-        null
+    } catch (e: Exception) {
+    Log.e("QRScan", "Decoding failed", e)
+    null
     }
 }
 

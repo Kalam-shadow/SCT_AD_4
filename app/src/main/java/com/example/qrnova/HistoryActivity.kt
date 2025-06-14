@@ -25,8 +25,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -196,17 +198,118 @@ fun HistoryScreen(viewModel: QrHistoryViewModel) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScannedHistoryScreen(viewModel: QrHistoryViewModel) {
     val history by viewModel.scannedHistory.collectAsState()
-    ElevatedCard {
-        if (history.isEmpty()) {
-            Text("No scanned QR codes yet.")
-        } else {
-            LazyColumn {
-                items(history) { item ->
-                    Text(text = "QR: ${item.content}")
-                    Text("Time: ${Date(item.timestamp)}")
+    val selectedItems = remember { mutableStateSetOf<String>() }
+    val inSelectionMode by remember { derivedStateOf { selectedItems.isNotEmpty() } }
+    val context = LocalContext.current
+
+    Scaffold(
+        topBar = {
+            if (inSelectionMode) {
+                MediumTopAppBar(
+                    title = { Text("${selectedItems.size} selected") },
+                    actions = {
+                        IconButton(onClick = {
+                            // Handle select all logic
+                            if (selectedItems.size == history.size) {
+                                selectedItems.clear()
+                            } else {
+                                toggleAllItems(selectedItems, history.map { it.content })
+                            }
+                        }) {
+                            Icon(Icons.Default.SelectAll, contentDescription = "Select All")
+                        }
+                        IconButton(onClick = {
+                            // Handle share logic
+                            viewModel.shareQrCodes(context, selectedItems)
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = "Share")
+                        }
+
+                        IconButton(onClick = {
+                            // Handle delete logic
+                            viewModel.deleteScannedQr(selectedItems)
+                            selectedItems.clear()
+                        }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete")
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { selectedItems.clear() }) {
+                            Icon(Icons.Default.Close, contentDescription = "Cancel")
+                        }
+                    }
+                )
+            }
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            if (history.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No scanned QR codes yet.")
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(history) { item ->
+                        val isSelected = selectedItems.contains(item.content)
+
+                        ElevatedCard(
+                            modifier = Modifier
+                                .padding(bottom = 6.dp)
+                                .combinedClickable(
+                                    onClick = {
+                                        if (inSelectionMode) {
+                                            toggleItem(selectedItems, item.content)
+                                        }
+                                    },
+                                    onLongClick = {
+                                        toggleItem(selectedItems, item.content)
+                                    }
+                                ),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                        else MaterialTheme.colorScheme.surface
+                                    )
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if(Patterns.WEB_URL.matcher(item.content).matches()){
+                                    Icon(
+                                        Icons.Default.Link, contentDescription = "link"
+                                    )
+                                }else{
+                                    Icon(
+                                        Icons.Default.TextFields, contentDescription = "Text"
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = item.content,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -300,11 +403,12 @@ fun CreatedHistoryScreen(viewModel: QrHistoryViewModel) {
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth()
-                                    .padding(8.dp)
                                     .background(
                                         if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                                         else MaterialTheme.colorScheme.surface
-                                    ),
+                                    )
+                                    .padding(12.dp)
+                                ,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Image(

@@ -80,6 +80,9 @@ dependencies {
 
     //image
     implementation(libs.coil.compose)
+    implementation(libs.androidx.concurrent.futures.ktx)
+
+
 
     //pager + Tabrow
     implementation(libs.material3)

@@ -32,6 +32,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +48,7 @@ import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.set
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.MultiFormatWriter
 import com.google.zxing.common.BitMatrix
@@ -62,6 +64,13 @@ fun CreateScreen(viewModel: QrViewModel, historyViewModel: QrHistoryViewModel) {
     val qrState = viewModel.qrState
     val context = LocalContext.current
     var imageUri by remember { mutableStateOf<Uri?>(null) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        onDispose {
+            viewModel.clearQr()
+        }
+    }
 
     LaunchedEffect(qrState.qrBitmap) {
         if(qrState.qrBitmap != null) {
@@ -330,6 +339,10 @@ class QrViewModel : ViewModel() {
         if (qrState.inputText.isNotBlank()) {
             qrState = qrState.copy(qrBitmap = generateQRCode(qrState.inputText))
         }
+    }
+
+    fun clearQr() {
+        qrState = QrState()
     }
 }
 
