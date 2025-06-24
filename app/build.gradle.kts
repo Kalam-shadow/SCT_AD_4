@@ -70,6 +70,9 @@ dependencies {
     // ZXing (QR Code Scanner)
     implementation(libs.core)
 
+    //mlkit
+    implementation(libs.barcode.scanning)
+
     //torch material extend
     implementation(libs.androidx.material.icons.extended)
 

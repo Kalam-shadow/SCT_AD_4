@@ -25,9 +25,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.ManageHistory
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.NewLabel
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -66,6 +66,12 @@ class MainActivity : ComponentActivity() {
     private var initialSharedImageUri: Uri? = null
     private val viewModel: QrViewModel by viewModels()
     private val historyViewModel: QrHistoryViewModel by viewModels()
+    val shouldResetScanState = mutableStateOf(false)
+
+    override fun onResume() {
+        super.onResume()
+        shouldResetScanState.value = true
+    }
 
 
     @SuppressLint("UnusedBoxWithConstraintsScope", "ViewModelConstructorInComposable")
@@ -96,8 +102,8 @@ class MainActivity : ComponentActivity() {
                 }
 
                 val topLevelRoutes = listOf(
-                    TopLevelRoute("QR Scan", "Scanner", Icons.Default.Search),
-                    TopLevelRoute("QR Create", "Creator", Icons.Default.Build)
+                    TopLevelRoute("QR Scan", "Scanner", Icons.Default.QrCodeScanner),
+                    TopLevelRoute("QR Create", "Creator", Icons.Default.NewLabel)
                 )
 
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -241,7 +247,6 @@ class MainActivity : ComponentActivity() {
         } else null
     }
 
-    // ---- UI Components ---- //
 
     @Composable
     fun BottomNavigationBar(
@@ -323,7 +328,7 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.R)
     @Composable
     fun QRscanScreen(historyViewModel: QrHistoryViewModel) {
-        ScanScreen(historyViewModel, activity = this) // Make ScanScreen accept this
+        ScanScreen(historyViewModel, activity = this, shouldResetScanState = shouldResetScanState) // Make ScanScreen accept this
     }
 
     @OptIn(ExperimentalMaterial3Api::class)

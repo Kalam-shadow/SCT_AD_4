@@ -83,7 +83,6 @@ class HistoryActivity : ComponentActivity() {
                             },
                             actions = {
                                 IconButton(onClick = {
-                                    // Handle close action
                                     finish()
                                 }) {
                                     Icon(Icons.Default.Close, contentDescription = "Close")
@@ -104,8 +103,9 @@ class HistoryActivity : ComponentActivity() {
                             PlainTextResultView(
                                 result = scannedResult
                             )
+                        }else{
+                            HistoryScreen(viewModel = viewModel)
                         }
-                        HistoryScreen(viewModel = viewModel)
                     }
                 }
             }
@@ -125,25 +125,43 @@ class HistoryActivity : ComponentActivity() {
 
 @Composable
 fun PlainTextResultView(result: String) {
-    ElevatedCard {
+    ElevatedCard(
+        modifier = Modifier
+            .padding(16.dp)
+            .fillMaxWidth()
+    ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
+                .background(MaterialTheme.colorScheme.secondaryContainer)
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ){
             Text(
-                text = "Scanned Text",
-                style = MaterialTheme.typography.titleLarge
+                text = "Scan Result:",
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyMedium
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                text = result,
-                fontSize = 18.sp,
-                modifier = Modifier.weight(1f)
-            )
+            Row {
+                if(Patterns.WEB_URL.matcher(result).matches()){
+                    Icon(
+                        Icons.Default.Link, contentDescription = "link"
+                    )
+                }else{
+                    Icon(
+                        Icons.Default.TextFields, contentDescription = "Text"
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = result,
+                    fontSize = 16.sp,
+                )
+            }
+
         }
     }
 }
