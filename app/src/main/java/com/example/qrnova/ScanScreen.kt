@@ -127,18 +127,12 @@ fun ScanScreen(
         onResult = { uri ->
             uri?.let { selectedImageUri ->
                 val qrText = decodeQRCodeFromImage(context, selectedImageUri) ?: "Error decoding QR code from image."
-                if (true) {
-                    scanResult = qrText
-                    Log.d("QRScan", "Scanned from image: $qrText")
-                    resultAndIntent(qrText, context)
+                scanResult = qrText
+                Log.d("QRScan", "Scanned from image: $qrText")
+                resultAndIntent(qrText, context)
 
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Scanned from image: $qrText", duration = SnackbarDuration.Short)
-                    }
-                } else {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("No QR code found in the image.", duration = SnackbarDuration.Short)
-                    }
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("Scanned from image: $qrText", duration = SnackbarDuration.Short)
                 }
             }
         }
@@ -148,7 +142,11 @@ fun ScanScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         permissionGranted.value = isGranted
-        showPermissionDeniedUI.value = !isGranted
+//        showPermissionDeniedUI.value = !isGranted
+        if (!isGranted) {
+            val showRationale = ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA)
+            showPermissionDeniedUI.value = !showRationale // i.e., permanently denied if no rationale
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -156,11 +154,11 @@ fun ScanScreen(
         if (hasPermission) {
             permissionGranted.value = true
         } else {
-            if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA)) {
-                showPermissionDeniedUI.value = true
-            } else {
+//            if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA)) {
+//                showPermissionDeniedUI.value = true
+//            } else {
                 permissionLauncher.launch(Manifest.permission.CAMERA)
-            }
+//            }
         }
     }
 
@@ -418,7 +416,7 @@ private suspend fun scanQRCode(imageProxy: ImageProxy): String? = suspendCancell
                 val result = barcodes.firstOrNull()?.rawValue
                 cont.resume(result, onCancellation = null)
             }
-            .addOnFailureListener { e ->
+            .addOnFailureListener {
                 cont.resume(null, onCancellation = null)
             }
             .addOnCompleteListener {
