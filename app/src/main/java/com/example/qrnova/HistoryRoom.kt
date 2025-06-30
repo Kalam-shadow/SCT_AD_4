@@ -166,10 +166,12 @@ class QrHistoryViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun shareScannedQrCodes(context: Context, selectedItems: MutableSet<String>) {
-        val contents = selectedItems.toList()
-        val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+        val combinedLinks = selectedItems.joinToString(separator = "\n")
+
+        val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
-            putStringArrayListExtra(Intent.EXTRA_TEXT, ArrayList(contents))
+            putExtra(Intent.EXTRA_TEXT, combinedLinks)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
         val chooser = Intent.createChooser(intent, "Share Scanned QR codes")

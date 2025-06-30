@@ -55,7 +55,7 @@ import com.google.zxing.common.BitMatrix
 import java.io.File
 import java.io.FileOutputStream
 
-data class QrState(val inputText: String = "", val qrBitmap: Bitmap? = null)
+data class QrState(val inputText: String = "", val qrBitmap: Bitmap? = null, val isSaved: Boolean = false)
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,21 +64,15 @@ fun CreateScreen(viewModel: QrViewModel, historyViewModel: QrHistoryViewModel) {
     val qrState = viewModel.qrState
     val context = LocalContext.current
     var imageUri by remember { mutableStateOf<Uri?>(null) }
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    DisposableEffect(lifecycleOwner) {
-        onDispose {
-            viewModel.clearQr()
-        }
-    }
 
     LaunchedEffect(qrState.qrBitmap) {
-        if(qrState.qrBitmap != null) {
+        if(qrState.qrBitmap != null && !viewModel.isHandled()) {
             qrState.qrBitmap.let { bitmap ->
                 imageUri = storeQRCode(bitmap, context)
                 Log.d("CreateScreen", "QR Code saved with URI: $imageUri")
             }
             historyViewModel.addCreated(qrState.inputText, imageUri.toString())
+            viewModel.markHandled()
         }
     }
     Column(
@@ -173,10 +167,13 @@ fun QrInputField(
     onGenerate: () -> Unit
 ) {
     ElevatedCard(
-        modifier = Modifier.padding(16.dp)
+        modifier = Modifier
+            .padding(16.dp)
     ) {
         Column(
-            modifier = Modifier.padding(8.dp),
+            modifier = Modifier
+                .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f))
+                .padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             OutlinedTextField(
@@ -184,7 +181,6 @@ fun QrInputField(
                 onValueChange = { onTextChange(it)},
                 label = { Text("Enter Text to Generate QR Code") },
                 modifier = Modifier
-                    //  .background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(4.dp)
                     .fillMaxWidth()
             )
@@ -214,6 +210,7 @@ fun QrDisplayField(qrBitmap : Bitmap?) {
     ) {
         Column(
             modifier = Modifier
+                .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f))
                 .padding(36.dp)
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -249,6 +246,7 @@ fun QrUtilField(context: Context, qrBitmap: Bitmap?) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f))
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
@@ -331,18 +329,30 @@ class QrViewModel : ViewModel() {
     var qrState by mutableStateOf(QrState())
         private set
 
+    private var hasBeenHandled = false // <-- independent flag
+
     fun updateText(newText: String) {
         qrState = qrState.copy(inputText = newText, qrBitmap = null)
+        hasBeenHandled = false // Reset handling when text changes
     }
 
     fun generateQr() {
         if (qrState.inputText.isNotBlank()) {
             qrState = qrState.copy(qrBitmap = generateQRCode(qrState.inputText))
+            hasBeenHandled = false // Reset for this new bitmap
         }
     }
 
+    fun markHandled() {
+        hasBeenHandled = true
+    }
+
+    fun isHandled(): Boolean = hasBeenHandled
+
     fun clearQr() {
         qrState = QrState()
+        hasBeenHandled = false
+
     }
 }
 

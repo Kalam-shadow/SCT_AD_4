@@ -60,22 +60,92 @@ object ColorPalette {
     val LightSecondary = Color(0xFF00BCD4)  // Cyan 500 for accent
     val DarkSecondary = Color(0xFF80DEEA)   // Cyan 200 for dark mode accent
 
+    val LightSurfaceContainer = Color(0xFFF2F2F2) // Example: slightly different from surface
+    val DarkSurfaceContainer = Color(0xFF2C2C2C)
+
+    val LightPrimaryContainer = Color(0xFFB3E5FC) // Light cyan container
+    val OnLightPrimaryContainer = Color(0xFF000000)
+
+    val LightSecondaryContainer = Color(0xFFB2EBF2)
+    val OnLightSecondaryContainer = Color(0xFF000000)
+
+    val LightTertiaryContainer = Color(0xFFFFCDD2)
+    val OnLightTertiaryContainer = Color(0xFF000000)
+
+    val LightSurfaceVariant = Color(0xFFE0E0E0)
+    val OnLightSurfaceVariant = Color(0xFF000000)
+
+    val LightOnBackground = Color(0xFF000000)
+    val LightOnSurface = Color(0xFF000000)
+
+
+    val DarkPrimaryContainer = Color(0xFF4FC3F7)
+    val OnDarkPrimaryContainer = Color(0xFF000000)
+
+    val DarkSecondaryContainer = Color(0xFF263238)
+    val OnDarkSecondaryContainer = Color(0xFF000000)
+
+    val DarkTertiaryContainer = Color(0xFFEF9A9A)
+    val OnDarkTertiaryContainer = Color(0xFF000000)
+
+    val DarkSurfaceVariant = Color(0xFF424242)
+    val OnDarkSurfaceVariant = Color(0xFFFFFFFF)
+
+    val DarkOnBackground = Color(0xFFFFFFFF)
+    val DarkOnSurface = Color(0xFFFFFFFF)
+
 
     val LightColorScheme = lightColorScheme(
         primary = LightPrimary,
-        secondary = LightSecondary,
-        tertiary = Pink40,
-        background = LightBackground,
-        surface = LightSurface,
         onPrimary = OnLightPrimary,
+
+        primaryContainer = LightPrimaryContainer,
+        onPrimaryContainer = OnLightPrimaryContainer,
+
+        secondary = LightSecondary,
+        onSecondary = OnLightPrimary,
+        secondaryContainer = LightSecondaryContainer,
+        onSecondaryContainer = OnLightSecondaryContainer,
+
+        tertiary = Pink40,
+        onTertiary = OnLightPrimary,
+        tertiaryContainer = LightTertiaryContainer,
+        onTertiaryContainer = OnLightTertiaryContainer,
+
+        background = LightBackground,
+        onBackground = LightOnBackground,
+        surface = LightSurface,
+        onSurface = LightOnSurface,
+
+        surfaceVariant = LightSurfaceVariant,
+        onSurfaceVariant = OnLightSurfaceVariant,
+        surfaceContainer = LightSurfaceContainer
+
     )
     val DarkColorScheme = darkColorScheme(
         primary = DarkPrimary,
-        secondary = DarkSecondary,
-        tertiary = Pink80,
-        background = DarkBackground,
-        surface = DarkSurface,
         onPrimary = OnDarkPrimary,
+        primaryContainer = DarkPrimaryContainer,
+        onPrimaryContainer = OnDarkPrimaryContainer,
+
+        secondary = DarkSecondary,
+        onSecondary = OnDarkPrimary,
+        secondaryContainer = DarkSecondaryContainer,
+        onSecondaryContainer = OnDarkSecondaryContainer,
+
+        tertiary = Pink80,
+        onTertiary = OnDarkPrimary,
+        tertiaryContainer = DarkTertiaryContainer,
+        onTertiaryContainer = OnDarkTertiaryContainer,
+
+        background = DarkBackground,
+        onBackground = DarkOnBackground,
+        surface = DarkSurface,
+        onSurface = DarkOnSurface,
+
+        surfaceVariant = DarkSurfaceVariant,
+        onSurfaceVariant = OnDarkSurfaceVariant,
+        surfaceContainer = DarkSurfaceContainer
     )
 }
 

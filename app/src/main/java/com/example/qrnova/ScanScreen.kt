@@ -154,11 +154,7 @@ fun ScanScreen(
         if (hasPermission) {
             permissionGranted.value = true
         } else {
-//            if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA)) {
-//                showPermissionDeniedUI.value = true
-//            } else {
-                permissionLauncher.launch(Manifest.permission.CAMERA)
-//            }
+            permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 

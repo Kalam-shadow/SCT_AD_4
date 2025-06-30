@@ -1,7 +1,10 @@
 package com.example.qrnova
 
 import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.util.Patterns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,6 +27,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CopyAll
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.SelectAll
@@ -53,6 +57,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import coil.compose.rememberAsyncImagePainter
 import com.example.qrnova.ui.theme.QrnovaTheme
 import com.google.accompanist.pager.HorizontalPager
@@ -68,7 +73,6 @@ class HistoryActivity : ComponentActivity() {
 
         val scannedResult = intent?.getStringExtra("scanResult")
         val viewModel = QrHistoryViewModel(application)
-
 
         setContent {
             QrnovaTheme {
@@ -88,7 +92,6 @@ class HistoryActivity : ComponentActivity() {
                                     Icon(Icons.Default.Close, contentDescription = "Close")
                                 }
                             }
-
                         )
                     },
                     modifier = Modifier.fillMaxSize(),
@@ -99,16 +102,83 @@ class HistoryActivity : ComponentActivity() {
                             .padding(innerPadding) ,
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        if (scannedResult != null && isPlainText(scannedResult)) {
-                            PlainTextResultView(
-                                result = scannedResult
-                            )
+                        if (scannedResult != null) {
+                            if (isPlainText(scannedResult)) {
+                                PlainTextResultView(
+                                    result = scannedResult,
+                                    onClose = { finish() },
+                                    onShare = { viewModel.shareScannedQrCodes(this@HistoryActivity, mutableStateSetOf(scannedResult)) },
+                                    onCopy = { copyToClipboard(scannedResult) }
+                                )
+                            }else{
+                                openUrl(scannedResult)
+                                finish()
+                            }
                         }else{
                             HistoryScreen(viewModel = viewModel)
                         }
                     }
                 }
             }
+        }
+    }
+
+    private fun copyToClipboard(text: String) {
+        val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        val clip = android.content.ClipData.newPlainText("QR Result", text)
+        clipboard.setPrimaryClip(clip)
+    }
+
+    private fun openUrl(url: String) {
+        val cleaned = url.trim()
+        try {
+            when {
+                Patterns.WEB_URL.matcher(cleaned).matches() || cleaned.contains(".") -> {
+                    val fixedUrl =
+                        if (cleaned.startsWith("http://") || cleaned.startsWith("https://")) {
+                            cleaned
+                        } else {
+                            "https://$cleaned"
+                        }
+                    val intent = Intent(Intent.ACTION_VIEW, fixedUrl.toUri())
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(intent)
+                }
+
+                Patterns.PHONE.matcher(cleaned).matches() -> {
+                    val intent = Intent(Intent.ACTION_DIAL, "tel:$cleaned".toUri())
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(intent)
+                }
+                Patterns.EMAIL_ADDRESS.matcher(cleaned).matches() -> {
+                    val intent = Intent(Intent.ACTION_SENDTO, "mailto:$cleaned".toUri())
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(intent)
+                }
+                cleaned.startsWith("geo:") -> {
+                    val intent = Intent(Intent.ACTION_VIEW, cleaned.toUri())
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(intent)
+                }
+                cleaned.startsWith("mailto:") -> {
+                    val intent = Intent(Intent.ACTION_SENDTO, cleaned.toUri())
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(intent)
+                }
+                cleaned.startsWith("tel:") -> {
+                    val intent = Intent(Intent.ACTION_DIAL, cleaned.toUri())
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(intent)
+                }
+                else -> {
+                    Log.e("QRNova", "Unsupported URL format: $cleaned")
+                }
+            }
+        } catch (e: ActivityNotFoundException) {
+            Log.e(
+                "QRNova",
+                "No application can handle this request. Please install a web browser or check your URL."
+            )
         }
     }
 
@@ -119,49 +189,90 @@ class HistoryActivity : ComponentActivity() {
                 !text.startsWith("geo:") &&
                 !text.startsWith("mailto:") &&
                 !text.startsWith("tel:") &&
-                !text.startsWith("http")
+                !text.startsWith("http:") &&
+                !text.startsWith("https:")
     }
 }
 
 @Composable
-fun PlainTextResultView(result: String) {
-    ElevatedCard(
-        modifier = Modifier
-            .padding(16.dp)
-            .fillMaxWidth()
-    ) {
-        Column(
+fun PlainTextResultView(
+    result: String,
+    onClose: () -> Unit,
+    onShare: () -> Unit,
+    onCopy: () -> Unit
+) { Column {
+        ElevatedCard(
             modifier = Modifier
-                .background(MaterialTheme.colorScheme.secondaryContainer)
                 .padding(16.dp)
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ){
-            Text(
-                text = "Scan Result:",
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium
-            )
+                .fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Scan Result:",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyMedium
+                )
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Row {
-                if(Patterns.WEB_URL.matcher(result).matches()){
-                    Icon(
-                        Icons.Default.Link, contentDescription = "link"
-                    )
-                }else{
-                    Icon(
-                        Icons.Default.TextFields, contentDescription = "Text"
+                Row {
+                    if (Patterns.WEB_URL.matcher(result).matches()) {
+                        Icon(
+                            Icons.Default.Link, contentDescription = "link"
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.TextFields, contentDescription = "Text"
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = result,
+                        fontSize = 16.sp,
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = result,
-                    fontSize = 16.sp,
-                )
-            }
 
+            }
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        ElevatedCard(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Tool Box:",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row {
+                    IconButton(onClick = { onClose() }) {
+                        Icon(Icons.Default.Close, contentDescription = "Close")
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                    IconButton(onClick = { onCopy() }) {
+                        Icon(Icons.Default.CopyAll, contentDescription = "copy")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(onClick = { onShare() }) {
+                        Icon(Icons.Default.Share, contentDescription = "Share")
+                    }
+                }
+            }
         }
     }
 }
@@ -204,9 +315,9 @@ fun HistoryScreen(viewModel: QrHistoryViewModel) {
         HorizontalPager(
             count = tabs.size,
             state = pagerState,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
                 .padding(16.dp)
-                .background(MaterialTheme.colorScheme.background)
         ) { page ->
             when (page) {
                 0 -> ScannedHistoryScreen(viewModel)
@@ -242,7 +353,7 @@ fun ScannedHistoryScreen(viewModel: QrHistoryViewModel) {
                         }
                         IconButton(onClick = {
                             // Handle share logic
-                            viewModel.shareQrCodes(context, selectedItems)
+                            viewModel.shareScannedQrCodes(context, selectedItems)
                         }) {
                             Icon(Icons.Default.Share, contentDescription = "Share")
                         }
@@ -301,11 +412,12 @@ fun ScannedHistoryScreen(viewModel: QrHistoryViewModel) {
                                 ),
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
 
                                     .background(
                                         if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                        else MaterialTheme.colorScheme.surface
+                                        else MaterialTheme.colorScheme.surfaceContainer
                                     )
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -420,11 +532,11 @@ fun CreatedHistoryScreen(viewModel: QrHistoryViewModel) {
                                 ),
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
                                     .background(
                                         if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                        else MaterialTheme.colorScheme.surface
-                                    )
+                                        else MaterialTheme.colorScheme.surfaceContainer                                )
                                     .padding(12.dp)
                                 ,
                                 verticalAlignment = Alignment.CenterVertically

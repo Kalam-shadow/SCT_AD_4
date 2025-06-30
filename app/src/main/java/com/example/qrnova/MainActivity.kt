@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
     private var initialSharedImageUri: Uri? = null
     private val viewModel: QrViewModel by viewModels()
     private val historyViewModel: QrHistoryViewModel by viewModels()
-    val shouldResetScanState = mutableStateOf(false)
+    private val shouldResetScanState = mutableStateOf(false)
 
     override fun onResume() {
         super.onResume()
@@ -220,7 +220,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                     startActivity(historyIntent)
                                 },
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                containerColor = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.align(Alignment.Center)
                             ) {
                                 Column(
@@ -230,7 +230,7 @@ class MainActivity : ComponentActivity() {
                                     Icon(
                                         imageVector = Icons.Default.ManageHistory,
                                         contentDescription = "Show History",
-                                        tint = MaterialTheme.colorScheme.primary
+                                        tint = MaterialTheme.colorScheme.onPrimary
                                     )
                                 }
                             }
@@ -299,7 +299,7 @@ class MainActivity : ComponentActivity() {
                     val historyIntent = Intent(this@MainActivity, HistoryActivity::class.java)
                     startActivity(historyIntent)
                 },
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .offset(y = 8.dp)
@@ -311,7 +311,7 @@ class MainActivity : ComponentActivity() {
                     Icon(
                         imageVector = Icons.Default.ManageHistory,
                         contentDescription = "Show History",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             }
@@ -321,8 +321,8 @@ class MainActivity : ComponentActivity() {
     data class TopLevelRoute(val name: String, val route: String, val icon: ImageVector)
 
     sealed class NavRoute(val route: String) {
-        object Scanner : NavRoute("Scanner")
-        object Creator : NavRoute("Creator")
+        data object Scanner : NavRoute("Scanner")
+        data object Creator : NavRoute("Creator")
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
