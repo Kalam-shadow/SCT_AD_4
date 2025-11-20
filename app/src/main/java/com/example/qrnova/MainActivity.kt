@@ -82,7 +82,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         // Capture shared image on launch
-        initialSharedImageUri = getSharedImageUri(intent)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            initialSharedImageUri = getSharedImageUri(intent)
+        }
 
         setContent {
             QrnovaTheme {
@@ -96,7 +98,7 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(Unit) {
                     initialSharedImageUri?.let { uri ->
                         val qrText = decodeQRCodeFromImage(this@MainActivity, uri) ?: ""
-                        Log.d("QRnova", "Decoded on launch: $qrText")
+                        Log.d("QR nova", "Decoded on launch: $qrText")
                         if (qrText.isNotEmpty()) scanResult.value = qrText
                     }
                 }
@@ -129,10 +131,10 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 composable(NavRoute.Scanner.route) {
-                                    QRscanScreen(historyViewModel)
+                                    QrScanScreen(historyViewModel)
                                 }
                                 composable(NavRoute.Creator.route) {
-                                    QRcreateScreen()
+                                    QrCreateScreen()
                                 }
                             }
                         }
@@ -156,10 +158,10 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 composable(NavRoute.Scanner.route) {
-                                    QRscanScreen(historyViewModel)
+                                    QrScanScreen(historyViewModel)
                                 }
                                 composable(NavRoute.Creator.route) {
-                                    QRcreateScreen()
+                                    QrCreateScreen()
                                 }
                             }
                         }
@@ -215,9 +217,10 @@ class MainActivity : ComponentActivity() {
                             }
                             SmallFloatingActionButton(
                                 onClick = {
-                                    val historyIntent = Intent(this@MainActivity, HistoryActivity::class.java).apply {
-                                        putExtra("scanResult", scanResult.value)
-                                    }
+                                    val historyIntent = Intent(this@MainActivity, HistoryActivity::class.java)
+//                                        .apply {
+//                                        putExtra("scanResult", scanResult.value)
+//                                    }
                                     startActivity(historyIntent)
                                 },
                                 containerColor = MaterialTheme.colorScheme.primary,
@@ -241,9 +244,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun getSharedImageUri(intent: Intent?): Uri? {
         return if (intent?.action == Intent.ACTION_SEND && intent.type?.startsWith("image/") == true) {
-            intent.getParcelableExtra(Intent.EXTRA_STREAM)
+            intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
         } else null
     }
 
@@ -327,7 +331,7 @@ class MainActivity : ComponentActivity() {
 
     @RequiresApi(Build.VERSION_CODES.R)
     @Composable
-    fun QRscanScreen(historyViewModel: QrHistoryViewModel) {
+    fun QrScanScreen(historyViewModel: QrHistoryViewModel) {
         ScanScreen(historyViewModel, activity = this, shouldResetScanState = shouldResetScanState) // Make ScanScreen accept this
     }
 
@@ -345,7 +349,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun QRcreateScreen() {
+    fun QrCreateScreen() {
         CreateScreen(viewModel, historyViewModel) // Make CreateScreen accept this
     }
 }

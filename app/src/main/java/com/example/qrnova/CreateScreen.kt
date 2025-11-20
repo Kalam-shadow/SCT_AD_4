@@ -1,19 +1,21 @@
 package com.example.qrnova
 
-import android.annotation.SuppressLint
+ import android.annotation.SuppressLint
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Environment
+import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -32,7 +34,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -48,12 +50,12 @@ import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.set
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.MultiFormatWriter
 import com.google.zxing.common.BitMatrix
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 
 data class QrState(val inputText: String = "", val qrBitmap: Bitmap? = null, val isSaved: Boolean = false)
 
@@ -64,6 +66,8 @@ fun CreateScreen(viewModel: QrViewModel, historyViewModel: QrHistoryViewModel) {
     val qrState = viewModel.qrState
     val context = LocalContext.current
     var imageUri by remember { mutableStateOf<Uri?>(null) }
+    val config = LocalConfiguration.current
+    val isLandscape = config.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     LaunchedEffect(qrState.qrBitmap) {
         if(qrState.qrBitmap != null && !viewModel.isHandled()) {
@@ -90,46 +94,25 @@ fun CreateScreen(viewModel: QrViewModel, historyViewModel: QrHistoryViewModel) {
             }
         )
 
-        BoxWithConstraints(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            val isLandscape = maxWidth > maxHeight
+//            val isLandscape = maxWidth > maxHeight
 
-            val inputSection = @Composable {
-                QrInputField(
-                    inputText = qrState.inputText,
-                    onTextChange = { viewModel.updateText(it) },
-                    onGenerate = {
-                        if (qrState.inputText.isNotBlank()) {
-                            viewModel.generateQr()
-                        } else {
-                            Toast.makeText(context, "Enter text first", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                )
-            }
-
-            val displaySection = @Composable {
-                QrDisplayField(qrState.qrBitmap)
-            }
-
-            val utilSection = @Composable {
-                QrUtilField(context, qrState.qrBitmap)
-            }
             if (isLandscape) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxSize(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        inputSection()
-                        utilSection()
+                        QrInputSection(viewModel = viewModel, context = context)
+                        QrUtilSection(qrBitmap = viewModel.qrState.qrBitmap)
                     }
                     Column(modifier = Modifier.weight(1f)) {
-                        displaySection()
+                        QrDisplaySection(qrBitmap = viewModel.qrState.qrBitmap)
                     }
                 }
             } else {
@@ -137,14 +120,41 @@ fun CreateScreen(viewModel: QrViewModel, historyViewModel: QrHistoryViewModel) {
                     modifier = Modifier
                         .fillMaxSize()
                 ) {
-                    inputSection()
-                    displaySection()
-                    utilSection()
+                    QrInputSection(viewModel,context)
+                    QrDisplaySection(qrBitmap = viewModel.qrState.qrBitmap)
+                    QrUtilSection(qrBitmap = viewModel.qrState.qrBitmap)
                 }
             }
         }
     }
 }
+
+@Composable
+private fun QrInputSection(viewModel: QrViewModel,context: Context) {
+    QrInputField(
+        inputText = viewModel.qrState.inputText,
+        onTextChange = { viewModel.updateText(it) },
+        onGenerate = {
+            if (viewModel.qrState.inputText.isNotBlank()) {
+                viewModel.generateQr()
+            } else {
+                Toast.makeText(context, "Enter text first", Toast.LENGTH_SHORT).show()
+            }
+        }
+    )
+}
+
+@Composable
+private fun QrDisplaySection(qrBitmap: Bitmap?) {
+    QrDisplayField(qrBitmap)
+}
+
+@Composable
+private fun QrUtilSection(qrBitmap: Bitmap?) {
+    val context = LocalContext.current
+    QrUtilField(context, qrBitmap)
+}
+
 
 // Function to Generate QR Code Bitmap
 private fun generateQRCode(text: String): Bitmap {
@@ -308,23 +318,58 @@ private fun storeQRCode(bitmap: Bitmap, context: Context): Uri? {
     return uri // Return the URI for further use, e.g., sharing
 }
 // Function to Save QR Code to Storage
+//private fun saveQRCodeToStorage(bitmap: Bitmap, context: Context) {
+//    val directory = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "QRNova")
+//    if (!directory.exists()) directory.mkdirs()
+//
+//    val file = File(directory, "QRCode_${System.currentTimeMillis()}.png")
+//    FileOutputStream(file).use { out ->
+//        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+//        out.flush()
+//    }
+//
+//    // Trigger Media Scanner to make image visible in Gallery under "QRNova_Album"
+//    MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), arrayOf("image/jpeg")) { path, uri ->
+//        println("Image saved and scanned: $path -> $uri")
+//    }
+//    Toast.makeText(context, "QR Code saved at ${file.absolutePath}", Toast.LENGTH_SHORT).show()
+//}
+
+
+// ... other imports
 private fun saveQRCodeToStorage(bitmap: Bitmap, context: Context) {
-    val directory = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "QRNova")
-    if (!directory.exists()) directory.mkdirs()
+    val collection =
+        MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
 
-    val file = File(directory, "QRCode_${System.currentTimeMillis()}.png")
-    FileOutputStream(file).use { out ->
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-        out.flush()
+    val contentValues = ContentValues().apply {
+        put(MediaStore.Images.Media.DISPLAY_NAME, "QRCode_${System.currentTimeMillis()}.png")
+        put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+        put(MediaStore.Images.Media.IS_PENDING, 1)
+        put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/QRNova")
     }
 
-    // Trigger Media Scanner to make image visible in Gallery under "QRNova_Album"
-    MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), arrayOf("image/jpeg")) { path, uri ->
-        println("Image saved and scanned: $path -> $uri")
+    val resolver = context.contentResolver
+    val uri = resolver.insert(collection, contentValues)
+
+    uri?.let {
+        try {
+            resolver.openOutputStream(it).use { out ->
+                if (out == null) throw IOException("Failed to open output stream.")
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+
+            contentValues.clear()
+            contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
+            resolver.update(it, contentValues, null, null)
+            Toast.makeText(context, "QR Code saved to Gallery", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            // Clean up the entry if something went wrong
+            resolver.delete(uri, null, null)
+            Toast.makeText(context, "Failed to save QR Code", Toast.LENGTH_SHORT).show()
+            Log.e("SaveQRCode", "Error saving QR Code", e)
+        }
     }
-    Toast.makeText(context, "QR Code saved at ${file.absolutePath}", Toast.LENGTH_SHORT).show()
 }
-
 class QrViewModel : ViewModel() {
     var qrState by mutableStateOf(QrState())
         private set
@@ -349,11 +394,10 @@ class QrViewModel : ViewModel() {
 
     fun isHandled(): Boolean = hasBeenHandled
 
-    fun clearQr() {
-        qrState = QrState()
-        hasBeenHandled = false
-
-    }
+//    fun clearQr() {
+//        qrState = QrState()
+//        hasBeenHandled = false
+//    }
 }
 
 

@@ -8,7 +8,6 @@ import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
-import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -62,6 +61,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.UiComposable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -97,11 +97,13 @@ fun ScanScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
-    var scanResult by remember { mutableStateOf<String?>(null) }
+
+   // var scanResult by remember { mutableStateOf<String?>(null) }
     var cameraControl by remember { mutableStateOf<CameraControl?>(null) }
     var zoomState by remember { mutableFloatStateOf(1f) }
-    var isGestureZoom by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
+
+    //var isGestureZoom by remember { mutableStateOf(false) }
+    val snackBarHostState = remember { SnackbarHostState() }
     var scanState by remember { mutableStateOf(false) }
     var isTorchOn by remember { mutableStateOf(false) }
     var camera: Camera? by remember { mutableStateOf(null) }
@@ -127,12 +129,11 @@ fun ScanScreen(
         onResult = { uri ->
             uri?.let { selectedImageUri ->
                 val qrText = decodeQRCodeFromImage(context, selectedImageUri) ?: "Error decoding QR code from image."
-                scanResult = qrText
                 Log.d("QRScan", "Scanned from image: $qrText")
                 resultAndIntent(qrText, context)
 
                 coroutineScope.launch {
-                    snackbarHostState.showSnackbar("Scanned from image: $qrText", duration = SnackbarDuration.Short)
+                    snackBarHostState.showSnackbar("Scanned from image: $qrText", duration = SnackbarDuration.Short)
                 }
             }
         }
@@ -159,7 +160,7 @@ fun ScanScreen(
     }
 
     Scaffold (
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackBarHostState) }
     ) {innerPadding ->
         if (showPermissionDeniedUI.value) {
             // Show permission denied UI
@@ -198,12 +199,13 @@ fun ScanScreen(
             Box(
                 modifier = Modifier.fillMaxSize()
             ) {
+                val androidViewSection = @UiComposable @Composable {
                 AndroidView(
                     modifier = Modifier
                         .fillMaxSize()
                         .pointerInput(Unit) {
                             detectTransformGestures { _, _, zoom, _ ->
-                                isGestureZoom = true
+                                //                               isGestureZoom = true
                                 val newZoom = (zoomState * zoom).coerceIn(0.5f, 9f)
                                 zoomState = newZoom
                                 cameraControl?.setZoomRatio(newZoom)
@@ -244,7 +246,7 @@ fun ScanScreen(
                                        coroutineScope.launch {
                                            val result = scanQRCode(imageProxy)
                                            if (!scanState && result != null) {
-                                               scanResult = result
+                                             //  scanResult = result
                                                viewModel.addScanned(result)
                                                Log.d("QRScan", "QR Code detected: $result")
                                                resultAndIntent(result, context)
@@ -267,6 +269,8 @@ fun ScanScreen(
                         previewView
                     }
                 )
+                }
+                androidViewSection()
                 Row(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -327,17 +331,17 @@ fun resultAndIntent(it: String, context: Context) {
 
 fun decodeQRCodeFromImage(context: Context, imageUri: Uri): String? {
     return try {
-        val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            val source = ImageDecoder.createSource(context.contentResolver, imageUri)
-            ImageDecoder.decodeBitmap(source){ decoder, _, _ ->
-                decoder.isMutableRequired = true
-                decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-            }
-        } else {
-            MediaStore.Images.Media.getBitmap(context.contentResolver, imageUri)
+//        val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        val source = ImageDecoder.createSource(context.contentResolver, imageUri)
+        val bitmap = ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
+            decoder.isMutableRequired = true
+            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
         }
+//        } else {
+//            MediaStore.Images.Media.getBitmap(context.contentResolver, imageUri)
+//        }
 
-        val argbBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        val argbBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, false)
         val intArray = IntArray(argbBitmap.width * argbBitmap.height)
         argbBitmap.getPixels(intArray, 0, argbBitmap.width, 0, 0, argbBitmap.width, argbBitmap.height)
 
@@ -360,36 +364,6 @@ fun decodeQRCodeFromImage(context: Context, imageUri: Uri): String? {
         null
     }
 }
-
-
-// Function to decode QR code using ZXing
-//private fun scanQRCode(imageProxy: ImageProxy): String? {
-//    imageProxy.use { proxy ->
-//        val buffer = proxy.planes[0].buffer
-//        val bytes = ByteArray(buffer.remaining()).apply { buffer.get(this) }
-//
-//        val source = PlanarYUVLuminanceSource(
-//            bytes, proxy.width, proxy.height,
-//            0, 0, proxy.width, proxy.height, false
-//        )
-//        val bitmap = proxy.toBitmap()
-//        val argbBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
-//        val intArray = IntArray(argbBitmap.width * argbBitmap.height)
-//        argbBitmap.getPixels(intArray, 0, argbBitmap.width, 0, 0, argbBitmap.width, argbBitmap.height)
-//
-//        val luminanceSource = RGBLuminanceSource(argbBitmap.width, argbBitmap.height, intArray)
-//
-//        val binaryBitmap = BinaryBitmap(HybridBinarizer(luminanceSource))
-//
-//        return try {
-//            val hints = mapOf(DecodeHintType.TRY_HARDER to true)
-//            MultiFormatReader().apply { setHints(hints) }.decode(binaryBitmap).text
-//        } catch (e: Exception) {
-//            Log.e("QRScan", "Error scanning from Image", e)
-//            null
-//        }
-//    }
-//}
 
 
 @androidx.annotation.OptIn(ExperimentalGetImage::class)

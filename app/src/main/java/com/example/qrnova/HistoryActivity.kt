@@ -25,11 +25,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CopyAll
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.ManageHistory
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.TextFields
@@ -53,6 +56,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -60,11 +64,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import coil.compose.rememberAsyncImagePainter
 import com.example.qrnova.ui.theme.QrnovaTheme
-import com.google.accompanist.pager.HorizontalPager
-import com.google.accompanist.pager.rememberPagerState
 import kotlinx.coroutines.launch
 import java.util.Date
-
 
 class HistoryActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -135,7 +136,8 @@ class HistoryActivity : ComponentActivity() {
             when {
                 Patterns.WEB_URL.matcher(cleaned).matches() || cleaned.contains(".") -> {
                     val fixedUrl =
-                        if (cleaned.startsWith("http://") || cleaned.startsWith("https://")) {
+//                        cleaned.startsWith("http://") ||
+                        if (cleaned.startsWith("https://")) {
                             cleaned
                         } else {
                             "https://$cleaned"
@@ -174,7 +176,7 @@ class HistoryActivity : ComponentActivity() {
                     Log.e("QRNova", "Unsupported URL format: $cleaned")
                 }
             }
-        } catch (e: ActivityNotFoundException) {
+        } catch (_: ActivityNotFoundException) {
             Log.e(
                 "QRNova",
                 "No application can handle this request. Please install a web browser or check your URL."
@@ -280,10 +282,13 @@ fun PlainTextResultView(
 
 @Composable
 fun HistoryScreen(viewModel: QrHistoryViewModel) {
-    val pagerState = rememberPagerState(initialPage = 0)
-    val coroutineScope = rememberCoroutineScope()
-
     val tabs = listOf("Scanned", "Created")
+
+    val pagerState = rememberPagerState(
+        initialPage = 0,
+        pageCount = {tabs.size}
+    )
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -313,7 +318,6 @@ fun HistoryScreen(viewModel: QrHistoryViewModel) {
         }
 
         HorizontalPager(
-            count = tabs.size,
             state = pagerState,
             modifier = Modifier
                 .fillMaxSize()
@@ -325,6 +329,7 @@ fun HistoryScreen(viewModel: QrHistoryViewModel) {
             }
         }
     }
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -387,7 +392,20 @@ fun ScannedHistoryScreen(viewModel: QrHistoryViewModel) {
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("No scanned QR codes yet.")
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.ManageHistory,
+                            contentDescription = "Empty History",
+                            modifier = Modifier.size(80.dp),
+                            tint = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "No Scanned QR Codes Yet",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.Gray
+                        )
+                    }
                 }
             } else {
                 LazyColumn(
@@ -536,7 +554,8 @@ fun CreatedHistoryScreen(viewModel: QrHistoryViewModel) {
                                     .fillMaxWidth()
                                     .background(
                                         if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                        else MaterialTheme.colorScheme.surfaceContainer                                )
+                                        else MaterialTheme.colorScheme.surfaceContainer
+                                    )
                                     .padding(12.dp)
                                 ,
                                 verticalAlignment = Alignment.CenterVertically
