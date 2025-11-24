@@ -1,10 +1,7 @@
 package com.example.qrnova
 
 import android.annotation.SuppressLint
-import android.content.ActivityNotFoundException
-import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.util.Patterns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -29,7 +26,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.CopyAll
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.ManageHistory
@@ -61,7 +57,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.net.toUri
 import coil.compose.rememberAsyncImagePainter
 import com.example.qrnova.ui.theme.QrnovaTheme
 import kotlinx.coroutines.launch
@@ -72,7 +67,7 @@ class HistoryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val scannedResult = intent?.getStringExtra("scanResult")
+//        val scannedResult = intent?.getStringExtra("scanResult")
         val viewModel = QrHistoryViewModel(application)
 
         setContent {
@@ -103,181 +98,35 @@ class HistoryActivity : ComponentActivity() {
                             .padding(innerPadding) ,
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        if (scannedResult != null) {
-                            if (isPlainText(scannedResult)) {
-                                PlainTextResultView(
-                                    result = scannedResult,
-                                    onClose = { finish() },
-                                    onShare = { viewModel.shareScannedQrCodes(this@HistoryActivity, mutableStateSetOf(scannedResult)) },
-                                    onCopy = { copyToClipboard(scannedResult) }
-                                )
-                            }else{
-                                openUrl(scannedResult)
-                                finish()
-                            }
-                        }else{
+//                        if (scannedResult != null) {
+////                            if (isPlainText(scannedResult)) {
+////                                PlainTextResultView(
+////                                    result = scannedResult,
+////                                    onClose = { finish() },
+////                                    onShare = { viewModel.shareScannedQrCodes(this@HistoryActivity, mutableStateSetOf(scannedResult)) },
+////                                    onCopy = { copyToClipboard(scannedResult) }
+////                                )
+////                            }else{
+////                                openUrl(scannedResult)
+////                                finish()
+////                            }
+//
+//                            ResultBottomSheet(
+//                                result = scannedResult,
+//                                onContinue = { openUrl(scannedResult) },
+//                                onShare = { viewModel.shareScannedQrCodes(this@HistoryActivity, mutableStateSetOf(scannedResult)) },
+//                                onCopy = { copyToClipboard(scannedResult) }
+//                            )
+//                        }else{
                             HistoryScreen(viewModel = viewModel)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private fun copyToClipboard(text: String) {
-        val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
-        val clip = android.content.ClipData.newPlainText("QR Result", text)
-        clipboard.setPrimaryClip(clip)
-    }
-
-    private fun openUrl(url: String) {
-        val cleaned = url.trim()
-        try {
-            when {
-                Patterns.WEB_URL.matcher(cleaned).matches() || cleaned.contains(".") -> {
-                    val fixedUrl =
-//                        cleaned.startsWith("http://") ||
-                        if (cleaned.startsWith("https://")) {
-                            cleaned
-                        } else {
-                            "https://$cleaned"
-                        }
-                    val intent = Intent(Intent.ACTION_VIEW, fixedUrl.toUri())
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    startActivity(intent)
-                }
-
-                Patterns.PHONE.matcher(cleaned).matches() -> {
-                    val intent = Intent(Intent.ACTION_DIAL, "tel:$cleaned".toUri())
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    startActivity(intent)
-                }
-                Patterns.EMAIL_ADDRESS.matcher(cleaned).matches() -> {
-                    val intent = Intent(Intent.ACTION_SENDTO, "mailto:$cleaned".toUri())
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    startActivity(intent)
-                }
-                cleaned.startsWith("geo:") -> {
-                    val intent = Intent(Intent.ACTION_VIEW, cleaned.toUri())
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    startActivity(intent)
-                }
-                cleaned.startsWith("mailto:") -> {
-                    val intent = Intent(Intent.ACTION_SENDTO, cleaned.toUri())
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    startActivity(intent)
-                }
-                cleaned.startsWith("tel:") -> {
-                    val intent = Intent(Intent.ACTION_DIAL, cleaned.toUri())
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    startActivity(intent)
-                }
-                else -> {
-                    Log.e("QRNova", "Unsupported URL format: $cleaned")
-                }
-            }
-        } catch (_: ActivityNotFoundException) {
-            Log.e(
-                "QRNova",
-                "No application can handle this request. Please install a web browser or check your URL."
-            )
-        }
-    }
-
-    private fun isPlainText(text: String): Boolean {
-        return !Patterns.WEB_URL.matcher(text).matches() &&
-                !Patterns.PHONE.matcher(text).matches() &&
-                !Patterns.EMAIL_ADDRESS.matcher(text).matches() &&
-                !text.startsWith("geo:") &&
-                !text.startsWith("mailto:") &&
-                !text.startsWith("tel:") &&
-                !text.startsWith("http:") &&
-                !text.startsWith("https:")
-    }
-}
-
-@Composable
-fun PlainTextResultView(
-    result: String,
-    onClose: () -> Unit,
-    onShare: () -> Unit,
-    onCopy: () -> Unit
-) { Column {
-        ElevatedCard(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(16.dp)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "Scan Result:",
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row {
-                    if (Patterns.WEB_URL.matcher(result).matches()) {
-                        Icon(
-                            Icons.Default.Link, contentDescription = "link"
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.TextFields, contentDescription = "Text"
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = result,
-                        fontSize = 16.sp,
-                    )
-                }
-
-            }
-        }
-        Spacer(modifier = Modifier.weight(1f))
-        ElevatedCard(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(16.dp)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "Tool Box:",
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Row {
-                    IconButton(onClick = { onClose() }) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    IconButton(onClick = { onCopy() }) {
-                        Icon(Icons.Default.CopyAll, contentDescription = "copy")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    IconButton(onClick = { onShare() }) {
-                        Icon(Icons.Default.Share, contentDescription = "Share")
+//                        }
                     }
                 }
             }
         }
     }
 }
+
 
 
 @Composable

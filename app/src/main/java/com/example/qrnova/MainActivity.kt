@@ -332,7 +332,7 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.R)
     @Composable
     fun QrScanScreen(historyViewModel: QrHistoryViewModel) {
-        ScanScreen(historyViewModel, activity = this, shouldResetScanState = shouldResetScanState) // Make ScanScreen accept this
+        ScanScreen(historyViewModel, activity = this) // Make ScanScreen accept this
     }
 
     @OptIn(ExperimentalMaterial3Api::class)

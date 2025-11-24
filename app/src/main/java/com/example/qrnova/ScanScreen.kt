@@ -1,7 +1,11 @@
 package com.example.qrnova
 
 import android.Manifest
+import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
+import android.content.Context.CLIPBOARD_SERVICE
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -10,6 +14,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import android.util.Patterns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -36,26 +41,35 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CopyAll
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -65,7 +79,9 @@ import androidx.compose.ui.UiComposable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -87,12 +103,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.concurrent.Executors
 
+@OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
 fun ScanScreen(
     viewModel: QrHistoryViewModel,
     activity: MainActivity,
-    shouldResetScanState: MutableState<Boolean>
+//    shouldResetScanState: MutableState<Boolean>
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -104,23 +121,37 @@ fun ScanScreen(
 
     //var isGestureZoom by remember { mutableStateOf(false) }
     val snackBarHostState = remember { SnackbarHostState() }
-    var scanState by remember { mutableStateOf(false) }
+//    var scanState by remember { mutableStateOf(false) }
     var isTorchOn by remember { mutableStateOf(false) }
     var camera: Camera? by remember { mutableStateOf(null) }
     val coroutineScope = rememberCoroutineScope()
     val permissionGranted = remember { mutableStateOf(false) }
     val showPermissionDeniedUI = remember { mutableStateOf(false) }
 
-    LaunchedEffect(shouldResetScanState.value) {
-        if (shouldResetScanState.value) {
-            scanState = false
-            shouldResetScanState.value = false
-        }
-    }
+    //Result from BottomSheet
+    val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
+    var result by remember { mutableStateOf<String?>(null) }
+
+//    LaunchedEffect(shouldResetScanState.value) {
+//        if (shouldResetScanState.value) {
+//            scanState = false
+//            shouldResetScanState.value = false
+//        }
+//    }
 
     DisposableEffect(Unit) {
         onDispose {
             cameraExecutor.shutdown()
+        }
+    }
+
+    if (sheetState.isVisible && result != null) {
+        ModalBottomSheet(
+            onDismissRequest = {result = null},
+            sheetState = sheetState
+        ) {
+            ResultContent(result!!,viewModel,context)
         }
     }
 
@@ -130,8 +161,11 @@ fun ScanScreen(
             uri?.let { selectedImageUri ->
                 val qrText = decodeQRCodeFromImage(context, selectedImageUri) ?: "Error decoding QR code from image."
                 Log.d("QRScan", "Scanned from image: $qrText")
-                resultAndIntent(qrText, context)
+                result = qrText
 
+                scope.launch {
+                    sheetState.show()
+                }
                 coroutineScope.launch {
                     snackBarHostState.showSnackbar("Scanned from image: $qrText", duration = SnackbarDuration.Short)
                 }
@@ -242,15 +276,22 @@ fun ScanScreen(
                                 cameraControl?.setZoomRatio(1.2f)
 
                                 imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
+                                    if (result != null) {
+                                        imageProxy.close() // Important: always close the proxy
+                                        return@setAnalyzer
+                                    }
                                     try {
                                        coroutineScope.launch {
-                                           val result = scanQRCode(imageProxy)
-                                           if (!scanState && result != null) {
-                                             //  scanResult = result
-                                               viewModel.addScanned(result)
+                                           val scannedResult = scanQRCode(imageProxy)
+                                           if (scannedResult != null) {
+                                               result = scannedResult
+                                               viewModel.addScanned(result!!)
                                                Log.d("QRScan", "QR Code detected: $result")
-                                               resultAndIntent(result, context)
-                                               scanState = true
+
+                                               scope.launch {
+                                                   sheetState.show()
+                                               }
+
                                                if (zoomState < 2f) {
                                                    zoomState += 0.1f
                                                    cameraControl?.setZoomRatio(zoomState)
@@ -322,13 +363,150 @@ fun ScanScreen(
     }
 }
 
-fun resultAndIntent(it: String, context: Context) {
-    val intent = Intent(context, HistoryActivity::class.java).apply {
-        putExtra("scanResult", it)
-    }
-    context.startActivity(intent)
+private fun copyToClipboard(text: String, context: Context) {
+    val clipboard = context.getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+    val clip = ClipData.newPlainText("QR Result", text)
+    clipboard.setPrimaryClip(clip)
 }
 
+private fun openUrl(url: String, context: Context) {
+    val cleaned = url.trim()
+    try {
+        when {
+            Patterns.WEB_URL.matcher(cleaned).matches() || cleaned.contains(".") -> {
+                val fixedUrl =
+//                        cleaned.startsWith("http://") ||
+                    if (cleaned.startsWith("https://")) {
+                        cleaned
+                    } else {
+                        "https://$cleaned"
+                    }
+                val intent = Intent(Intent.ACTION_VIEW, fixedUrl.toUri())
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+            }
+
+            Patterns.PHONE.matcher(cleaned).matches() -> {
+                val intent = Intent(Intent.ACTION_DIAL, "tel:$cleaned".toUri())
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+            }
+            Patterns.EMAIL_ADDRESS.matcher(cleaned).matches() -> {
+                val intent = Intent(Intent.ACTION_SENDTO, "mailto:$cleaned".toUri())
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+            }
+            cleaned.startsWith("geo:") -> {
+                val intent = Intent(Intent.ACTION_VIEW, cleaned.toUri())
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+            }
+            cleaned.startsWith("mailto:") -> {
+                val intent = Intent(Intent.ACTION_SENDTO, cleaned.toUri())
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+            }
+            cleaned.startsWith("tel:") -> {
+                val intent = Intent(Intent.ACTION_DIAL, cleaned.toUri())
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+            }
+            else -> {
+                Log.e("QRNova", "Unsupported URL format: $cleaned")
+            }
+        }
+    } catch (_: ActivityNotFoundException) {
+        Log.e(
+            "QRNova",
+            "No application can handle this request. Please install a web browser or check your URL."
+        )
+    }
+}
+
+@Composable
+private fun ResultContent(result: String, viewModel: QrHistoryViewModel,context: Context){
+    Column {
+        ElevatedCard(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Scan Result:",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row {
+                    if (Patterns.WEB_URL.matcher(result).matches()) {
+                        Icon(
+                            Icons.Default.Link, contentDescription = "link"
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.TextFields, contentDescription = "Text"
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = result,
+                        fontSize = 16.sp,
+                    )
+                }
+
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        ElevatedCard(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Tool Box:",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row {
+                    Spacer(modifier = Modifier.weight(0.5f))
+                    IconButton(onClick = { copyToClipboard(
+                        result,
+                        context = context
+                    ) }) {
+                        Icon(Icons.Default.CopyAll, contentDescription = "copy")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(onClick = { viewModel.shareScannedQrCodes(context, mutableStateSetOf(
+                        result
+                    )) }) {
+                        Icon(Icons.Default.Share, contentDescription = "Share")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(onClick = { openUrl(result, context) }) {
+                        Icon(Icons.Default.OpenInBrowser, contentDescription = "Continue")
+                    }
+                }
+            }
+        }
+    }
+}
 fun decodeQRCodeFromImage(context: Context, imageUri: Uri): String? {
     return try {
 //        val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
