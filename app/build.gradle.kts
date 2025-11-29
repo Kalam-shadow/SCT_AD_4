@@ -86,7 +86,9 @@ dependencies {
     implementation(libs.androidx.concurrent.futures.ktx)
 
 
-
+    //ucrop
+    implementation(libs.yalantis.ucrop)
+    implementation(libs.androidx.transition)
     //pager + Tabrow
     implementation(libs.material3)
     implementation(libs.androidx.foundation)

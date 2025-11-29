@@ -374,7 +374,20 @@ fun CreatedHistoryScreen(viewModel: QrHistoryViewModel) {
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("No created QR codes yet.")
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.ManageHistory,
+                            contentDescription = "Empty History",
+                            modifier = Modifier.size(80.dp),
+                            tint = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "No created QR Codes Yet",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.Gray
+                        )
+                    }
                 }
             } else {
                 LazyColumn(

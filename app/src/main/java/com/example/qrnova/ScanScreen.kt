@@ -1,6 +1,7 @@
 package com.example.qrnova
 
 import android.Manifest
+import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -27,6 +28,7 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +36,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -58,9 +61,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -78,7 +78,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.UiComposable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -98,9 +100,11 @@ import com.google.zxing.MultiFormatReader
 import com.google.zxing.NotFoundException
 import com.google.zxing.RGBLuminanceSource
 import com.google.zxing.common.HybridBinarizer
+import com.yalantis.ucrop.UCrop
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import java.io.File
 import java.util.concurrent.Executors
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -109,19 +113,17 @@ import java.util.concurrent.Executors
 fun ScanScreen(
     viewModel: QrHistoryViewModel,
     activity: MainActivity,
-//    shouldResetScanState: MutableState<Boolean>
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
 
-   // var scanResult by remember { mutableStateOf<String?>(null) }
     var cameraControl by remember { mutableStateOf<CameraControl?>(null) }
     var zoomState by remember { mutableFloatStateOf(1f) }
 
-    //var isGestureZoom by remember { mutableStateOf(false) }
-    val snackBarHostState = remember { SnackbarHostState() }
-//    var scanState by remember { mutableStateOf(false) }
+    // var isGestureZoom by remember { mutableStateOf(false) }
+    // var scanState by remember { mutableStateOf(false) }
+
     var isTorchOn by remember { mutableStateOf(false) }
     var camera: Camera? by remember { mutableStateOf(null) }
     val coroutineScope = rememberCoroutineScope()
@@ -155,20 +157,42 @@ fun ScanScreen(
         }
     }
 
+    val cropLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { resultState ->
+        if (resultState.resultCode == Activity.RESULT_OK) {
+            val outputUri = UCrop.getOutput(resultState.data!!)
+            outputUri?.let { uri ->
+                val qrText = decodeQRCodeFromImage(context, uri) ?: "No QR found"
+                result = qrText
+                viewModel.addScanned(result!!)
+                scope.launch {
+                    sheetState.show()
+                }
+            }
+        } else if (resultState.resultCode == UCrop.RESULT_ERROR) {
+            val error = UCrop.getError(resultState.data!!)
+            Log.e("uCrop", "Crop error", error)
+        }
+    }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri ->
             uri?.let { selectedImageUri ->
-                val qrText = decodeQRCodeFromImage(context, selectedImageUri) ?: "Error decoding QR code from image."
-                Log.d("QRScan", "Scanned from image: $qrText")
-                result = qrText
+                val destinationUri = Uri.fromFile(
+                    File(context.cacheDir, "cropped_${System.currentTimeMillis()}.jpg")
+                )
 
-                scope.launch {
-                    sheetState.show()
-                }
-                coroutineScope.launch {
-                    snackBarHostState.showSnackbar("Scanned from image: $qrText", duration = SnackbarDuration.Short)
-                }
+                val uCrop = UCrop.of(selectedImageUri, destinationUri)
+                    .withAspectRatio(1f, 1f) // you can remove or customize
+                    .withOptions(UCrop.Options().apply {
+                        setFreeStyleCropEnabled(true)
+                        setCompressionFormat(Bitmap.CompressFormat.JPEG)
+                        setCompressionQuality(90)
+                    })
+
+                cropLauncher.launch(uCrop.getIntent(context))
             }
         }
     )
@@ -193,9 +217,7 @@ fun ScanScreen(
         }
     }
 
-    Scaffold (
-        snackbarHost = { SnackbarHost(snackBarHostState) }
-    ) {innerPadding ->
+    Scaffold {innerPadding ->
         if (showPermissionDeniedUI.value) {
             // Show permission denied UI
             Box(
@@ -312,6 +334,15 @@ fun ScanScreen(
                 )
                 }
                 androidViewSection()
+                Image(
+                    painter = painterResource(id = R.drawable.neo_frame),
+                    contentDescription = "Scanner Frame",
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .aspectRatio(1f)
+                        .fillMaxSize(0.9f), // adjust as needed
+                    contentScale = ContentScale.FillBounds
+                )
                 Row(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)

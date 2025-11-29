@@ -25,6 +25,8 @@ roomKtx = "2.7.1"
 roomRuntime = "2.7.1"
 protoliteWellKnownTypes = "18.0.1"
 runtimeLivedata = "1.8.2"
+transition = "1.6.0"
+ucrop = "2.2.11-native"
 uiUtil = "1.8.2"
 
 [libraries]
@@ -43,6 +45,7 @@ androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref =
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "roomKtx" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRuntime" }
 androidx-runtime-livedata = { module = "androidx.compose.runtime:runtime-livedata", version.ref = "runtimeLivedata" }
+androidx-transition = { module = "androidx.transition:transition", version.ref = "transition" }
 androidx-ui-util = { module = "androidx.compose.ui:ui-util", version.ref = "uiUtil" }
 barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "barcodeScanning" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
@@ -64,6 +67,8 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 androidx-room-common-jvm = { group = "androidx.room", name = "room-common-jvm", version.ref = "roomCommonJvm" }
 material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
 protolite-well-known-types = { group = "com.google.firebase", name = "protolite-well-known-types", version.ref = "protoliteWellKnownTypes" }
+ucrop = { module = "com.github.yalantis:ucrop" }
+yalantis-ucrop = { module = "com.github.yalantis:ucrop", version.ref = "ucrop" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
