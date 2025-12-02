@@ -44,6 +44,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CopyAll
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
@@ -52,7 +53,9 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -61,6 +64,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -82,6 +88,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -99,11 +106,15 @@ import com.google.zxing.DecodeHintType
 import com.google.zxing.MultiFormatReader
 import com.google.zxing.NotFoundException
 import com.google.zxing.RGBLuminanceSource
+import com.google.zxing.common.GlobalHistogramBinarizer
 import com.google.zxing.common.HybridBinarizer
 import com.yalantis.ucrop.UCrop
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.Executors
 
@@ -113,6 +124,7 @@ import java.util.concurrent.Executors
 fun ScanScreen(
     viewModel: QrHistoryViewModel,
     activity: MainActivity,
+    initialSharedImageUri: Uri?
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -120,6 +132,8 @@ fun ScanScreen(
 
     var cameraControl by remember { mutableStateOf<CameraControl?>(null) }
     var zoomState by remember { mutableFloatStateOf(1f) }
+
+    val snackBarHostState = remember { SnackbarHostState() }
 
     // var isGestureZoom by remember { mutableStateOf(false) }
     // var scanState by remember { mutableStateOf(false) }
@@ -135,12 +149,24 @@ fun ScanScreen(
     val scope = rememberCoroutineScope()
     var result by remember { mutableStateOf<String?>(null) }
 
-//    LaunchedEffect(shouldResetScanState.value) {
-//        if (shouldResetScanState.value) {
-//            scanState = false
-//            shouldResetScanState.value = false
-//        }
-//    }
+    LaunchedEffect(Unit){
+        initialSharedImageUri?.let { uri ->
+            scope.launch {
+                val qrText = withContext(Dispatchers.Default) {
+                    decodeQRCodeFromImage(context, uri)
+                }
+                if (qrText != null) {
+                    result = qrText
+                    viewModel.addScanned(result!!)
+                    delay(150)
+                    sheetState.show()
+                }else{
+                    Log.e("QRScan", "No QR code found in SharedImage")
+                    snackBarHostState.showSnackbar("No QR code found", duration = SnackbarDuration.Long)
+                }
+            }
+        }
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -163,11 +189,19 @@ fun ScanScreen(
         if (resultState.resultCode == Activity.RESULT_OK) {
             val outputUri = UCrop.getOutput(resultState.data!!)
             outputUri?.let { uri ->
-                val qrText = decodeQRCodeFromImage(context, uri) ?: "No QR found"
-                result = qrText
-                viewModel.addScanned(result!!)
                 scope.launch {
-                    sheetState.show()
+                    val qrText = withContext(Dispatchers.Default) {
+                        decodeQRCodeFromImage(context, uri)
+                    }
+                    if (qrText != null) {
+                        result = qrText
+                        viewModel.addScanned(result!!)
+                        delay(150)
+                        sheetState.show()
+                    }else{
+                        Log.e("QRScan", "No QR code found in image")
+                        snackBarHostState.showSnackbar("No QR code found", duration = SnackbarDuration.Long)
+                    }
                 }
             }
         } else if (resultState.resultCode == UCrop.RESULT_ERROR) {
@@ -217,39 +251,73 @@ fun ScanScreen(
         }
     }
 
-    Scaffold {innerPadding ->
+    Scaffold (
+        snackbarHost = {
+            SnackbarHost(hostState = snackBarHostState)
+        }
+    ){innerPadding ->
         if (showPermissionDeniedUI.value) {
             // Show permission denied UI
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .background(Color.White),
+                    .background(Color(0xFF0A0A0A)),  // dark background
                 contentAlignment = Alignment.Center
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(24.dp)
                 ) {
-                    Text(
-                        text = "Camera permission is permanently denied.",
-                        color = Color.Red,
-                        style = MaterialTheme.typography.bodyLarge
+
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = "Permission Denied",
+                        tint = Color(0xFFFF4C4C),            // neon-ish red
+                        modifier = Modifier.size(100.dp)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Text(
+                        text = "Camera Permission Blocked",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "You’ve permanently denied camera access.\nOpen settings to enable it.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFFBBBBBB),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 20.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
                     ElevatedButton(
                         onClick = {
                             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                 data = "package:${context.packageName}".toUri()
                             }
                             context.startActivity(intent)
-                        }
+                        },
+                        colors = ButtonDefaults.elevatedButtonColors(
+                            containerColor = Color(0xFFFF4C4C),
+                            contentColor = Color.Black
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth(0.6f)
+                            .height(48.dp)
                     ) {
-                        Text("Open App Settings")
+                        Text("Open Settings")
                     }
                 }
-
             }
+
             return@Scaffold
         }else if(permissionGranted.value) {
             Box(
@@ -384,11 +452,27 @@ fun ScanScreen(
                 }
             }
         }else {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Text("Requesting camera permission…")
+                Icon(
+                    imageVector = Icons.Default.CameraAlt,
+                    contentDescription = "Camera Permission",
+                    modifier = Modifier.size(80.dp),
+                    tint = Color.Gray
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Need Camera Permission 😴",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.Gray
+                )
             }
         }
     }
@@ -539,36 +623,41 @@ private fun ResultContent(result: String, viewModel: QrHistoryViewModel,context:
     }
 }
 fun decodeQRCodeFromImage(context: Context, imageUri: Uri): String? {
-    return try {
-//        val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-        val source = ImageDecoder.createSource(context.contentResolver, imageUri)
-        val bitmap = ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
-            decoder.isMutableRequired = true
-            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-        }
-//        } else {
-//            MediaStore.Images.Media.getBitmap(context.contentResolver, imageUri)
-//        }
 
-        val argbBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, false)
-        val intArray = IntArray(argbBitmap.width * argbBitmap.height)
-        argbBitmap.getPixels(intArray, 0, argbBitmap.width, 0, 0, argbBitmap.width, argbBitmap.height)
+    val source = ImageDecoder.createSource(context.contentResolver, imageUri)
+    val bitmap = ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
+        decoder.isMutableRequired = true
+        decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+    }
 
-        val luminanceSource = RGBLuminanceSource(argbBitmap.width, argbBitmap.height, intArray)
-        val binaryBitmap = BinaryBitmap(HybridBinarizer(luminanceSource))
-        val reader = MultiFormatReader().apply {
-            setHints(
-                mapOf(
-                    DecodeHintType.TRY_HARDER to true,
-                    DecodeHintType.PURE_BARCODE to false
-                )
+    val argbBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, false)
+    val intArray = IntArray(argbBitmap.width * argbBitmap.height)
+    argbBitmap.getPixels(intArray, 0, argbBitmap.width, 0, 0, argbBitmap.width, argbBitmap.height)
+
+    val luminanceSource = RGBLuminanceSource(argbBitmap.width, argbBitmap.height, intArray)
+    val reader = MultiFormatReader().apply {
+        setHints(
+            mapOf(
+                DecodeHintType.TRY_HARDER to true,
+                DecodeHintType.PURE_BARCODE to false,
+                DecodeHintType.CHARACTER_SET to "UTF-8"
             )
-        }
+        )
+    }
+    return try {
+        val binaryBitmap = BinaryBitmap(HybridBinarizer(luminanceSource))
         reader.decode(binaryBitmap).text
-    }catch (e: NotFoundException) {
-        Log.w("QRScan", "No QR code found in image", e)
-        null
-    }catch (e: Exception) {
+
+    } catch (e: NotFoundException) {
+        Log.w("QRScan","HybridBarbarize failed",e)
+        try {
+            val fallbackBitmap = BinaryBitmap(GlobalHistogramBinarizer(luminanceSource))
+            reader.decode(fallbackBitmap).text
+        } catch (e2: Exception) {
+            Log.w("QRScan", "No QR code found in image", e2)
+            null
+        }
+    } catch (e: Exception) {
         Log.e("QRScan", "Error decoding QR from image", e)
         null
     }
@@ -593,10 +682,10 @@ private suspend fun scanQRCode(imageProxy: ImageProxy): String? = suspendCancell
         scanner.process(inputImage)
             .addOnSuccessListener { barcodes ->
                 val result = barcodes.firstOrNull()?.rawValue
-                cont.resume(result, onCancellation = null)
+                cont.resume(result) { cause, _, _ -> null?.let { it(cause) } }
             }
             .addOnFailureListener {
-                cont.resume(null, onCancellation = null)
+                cont.resume(null) { cause, _, _ -> null?.let { it1 -> it1(cause) } }
             }
             .addOnCompleteListener {
                 imageProxy.close()
@@ -604,7 +693,7 @@ private suspend fun scanQRCode(imageProxy: ImageProxy): String? = suspendCancell
     } else {
         Log.e("QRScan", "ImageProxy has no media image")
         imageProxy.close()
-        cont.resume(null, onCancellation = null)
+        cont.resume(null) { cause, _, _ -> null?.let { it(cause) } }
     }
 }
 

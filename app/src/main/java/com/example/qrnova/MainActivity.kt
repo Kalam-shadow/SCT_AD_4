@@ -6,7 +6,6 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -40,10 +39,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -89,19 +86,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             QrnovaTheme {
                 val navController = rememberNavController()
-                val scanResult = remember { mutableStateOf("") }
                 val isPortrait = resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
                 val historyViewModel = QrHistoryViewModel(application)
-
-
-                // Decode image only once on start
-                LaunchedEffect(Unit) {
-                    initialSharedImageUri?.let { uri ->
-                        val qrText = decodeQRCodeFromImage(this@MainActivity, uri) ?: ""
-                        Log.d("QR nova", "Decoded on launch: $qrText")
-                        if (qrText.isNotEmpty()) scanResult.value = qrText
-                    }
-                }
 
                 val topLevelRoutes = listOf(
                     TopLevelRoute("QR Scan", "Scanner", Icons.Default.QrCodeScanner),
@@ -158,7 +144,7 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 composable(NavRoute.Scanner.route) {
-                                    QrScanScreen(historyViewModel)
+                                    QrScanScreen(historyViewModel, initialSharedImageUri)
                                 }
                                 composable(NavRoute.Creator.route) {
                                     QrCreateScreen()
@@ -331,8 +317,8 @@ class MainActivity : ComponentActivity() {
 
     @RequiresApi(Build.VERSION_CODES.R)
     @Composable
-    fun QrScanScreen(historyViewModel: QrHistoryViewModel) {
-        ScanScreen(historyViewModel, activity = this) // Make ScanScreen accept this
+    fun QrScanScreen(historyViewModel: QrHistoryViewModel, initialSharedImageUri: Uri? = null) {
+        ScanScreen(historyViewModel, activity = this, initialSharedImageUri) // Make ScanScreen accept this
     }
 
     @OptIn(ExperimentalMaterial3Api::class)

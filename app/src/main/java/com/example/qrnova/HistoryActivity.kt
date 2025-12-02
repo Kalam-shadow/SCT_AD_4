@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.util.Patterns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -38,9 +39,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumTopAppBar
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -63,12 +64,14 @@ import kotlinx.coroutines.launch
 import java.util.Date
 
 class HistoryActivity : ComponentActivity() {
+    private val viewModel: QrHistoryViewModel by viewModels()
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
 //        val scannedResult = intent?.getStringExtra("scanResult")
-        val viewModel = QrHistoryViewModel(application)
+//        val viewModel = QrHistoryViewModel(application)
 
         setContent {
             QrnovaTheme {
@@ -98,36 +101,13 @@ class HistoryActivity : ComponentActivity() {
                             .padding(innerPadding) ,
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-//                        if (scannedResult != null) {
-////                            if (isPlainText(scannedResult)) {
-////                                PlainTextResultView(
-////                                    result = scannedResult,
-////                                    onClose = { finish() },
-////                                    onShare = { viewModel.shareScannedQrCodes(this@HistoryActivity, mutableStateSetOf(scannedResult)) },
-////                                    onCopy = { copyToClipboard(scannedResult) }
-////                                )
-////                            }else{
-////                                openUrl(scannedResult)
-////                                finish()
-////                            }
-//
-//                            ResultBottomSheet(
-//                                result = scannedResult,
-//                                onContinue = { openUrl(scannedResult) },
-//                                onShare = { viewModel.shareScannedQrCodes(this@HistoryActivity, mutableStateSetOf(scannedResult)) },
-//                                onCopy = { copyToClipboard(scannedResult) }
-//                            )
-//                        }else{
-                            HistoryScreen(viewModel = viewModel)
-//                        }
+                        HistoryScreen(viewModel = viewModel)
                     }
                 }
             }
         }
     }
 }
-
-
 
 @Composable
 fun HistoryScreen(viewModel: QrHistoryViewModel) {
@@ -143,7 +123,7 @@ fun HistoryScreen(viewModel: QrHistoryViewModel) {
         modifier = Modifier
             .fillMaxSize()
     ) {
-        TabRow(
+        PrimaryTabRow(
             selectedTabIndex = pagerState.currentPage,
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.primary
@@ -189,45 +169,85 @@ fun ScannedHistoryScreen(viewModel: QrHistoryViewModel) {
     val inSelectionMode by remember { derivedStateOf { selectedItems.isNotEmpty() } }
     val context = LocalContext.current
 
-    Scaffold(
-        topBar = {
-            if (inSelectionMode) {
-                MediumTopAppBar(
-                    title = { Text("${selectedItems.size} selected") },
-                    actions = {
-                        IconButton(onClick = {
-                            // Handle select all logic
-                            if (selectedItems.size == history.size) {
-                                selectedItems.clear()
-                            } else {
-                                toggleAllItems(selectedItems, history.map { it.content })
-                            }
-                        }) {
-                            Icon(Icons.Default.SelectAll, contentDescription = "Select All")
-                        }
-                        IconButton(onClick = {
-                            // Handle share logic
-                            viewModel.shareScannedQrCodes(context, selectedItems)
-                        }) {
-                            Icon(Icons.Default.Share, contentDescription = "Share")
-                        }
-
-                        IconButton(onClick = {
-                            // Handle delete logic
-                            viewModel.deleteScannedQr(selectedItems)
+    val topBar = @Composable {
+        if (inSelectionMode) {
+            MediumTopAppBar(
+                title = { Text("${selectedItems.size} selected") },
+                actions = {
+                    IconButton(onClick = {
+                        // Handle select all logic
+                        if (selectedItems.size == history.size) {
                             selectedItems.clear()
-                        }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete")
+                        } else {
+                            toggleAllItems(selectedItems, history.map { it.content })
                         }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { selectedItems.clear() }) {
-                            Icon(Icons.Default.Close, contentDescription = "Cancel")
-                        }
+                    }) {
+                        Icon(Icons.Default.SelectAll, contentDescription = "Select All")
                     }
-                )
-            }
+                    IconButton(onClick = {
+                        // Handle share logic
+                        viewModel.shareScannedQrCodes(context, selectedItems)
+                    }) {
+                        Icon(Icons.Default.Share, contentDescription = "Share")
+                    }
+
+                    IconButton(onClick = {
+                        // Handle delete logic
+                        viewModel.deleteScannedQr(selectedItems)
+                        selectedItems.clear()
+                    }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete")
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = { selectedItems.clear() }) {
+                        Icon(Icons.Default.Close, contentDescription = "Cancel")
+                    }
+                }
+            )
         }
+    }
+
+    Scaffold(
+        topBar = topBar
+//        topBar = {
+//            if (inSelectionMode) {
+//                MediumTopAppBar(
+//                    title = { Text("${selectedItems.size} selected") },
+//                    actions = {
+//                        IconButton(onClick = {
+//                            // Handle select all logic
+//                            if (selectedItems.size == history.size) {
+//                                selectedItems.clear()
+//                            } else {
+//                                toggleAllItems(selectedItems, history.map { it.content })
+//                            }
+//                        }) {
+//                            Icon(Icons.Default.SelectAll, contentDescription = "Select All")
+//                        }
+//                        IconButton(onClick = {
+//                            // Handle share logic
+//                            viewModel.shareScannedQrCodes(context, selectedItems)
+//                        }) {
+//                            Icon(Icons.Default.Share, contentDescription = "Share")
+//                        }
+//
+//                        IconButton(onClick = {
+//                            // Handle delete logic
+//                            viewModel.deleteScannedQr(selectedItems)
+//                            selectedItems.clear()
+//                        }) {
+//                            Icon(Icons.Default.Delete, contentDescription = "Delete")
+//                        }
+//                    },
+//                    navigationIcon = {
+//                        IconButton(onClick = { selectedItems.clear() }) {
+//                            Icon(Icons.Default.Close, contentDescription = "Cancel")
+//                        }
+//                    }
+//                )
+//            }
+//        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -322,45 +342,84 @@ fun CreatedHistoryScreen(viewModel: QrHistoryViewModel) {
     val inSelectionMode by remember { derivedStateOf { selectedItems.isNotEmpty() } }
     val context = LocalContext.current
 
-    Scaffold(
-        topBar = {
-            if (inSelectionMode) {
-                MediumTopAppBar(
-                    title = { Text("${selectedItems.size} selected") },
-                    actions = {
-                        IconButton(onClick = {
-                            // Handle select all logic
-                            if (selectedItems.size == history.size) {
-                                selectedItems.clear()
-                            } else {
-                                toggleAllItems(selectedItems, history.map { it.imageUri })
-                            }
-                        }) {
-                            Icon(Icons.Default.SelectAll, contentDescription = "Select All")
-                        }
-                        IconButton(onClick = {
-                            // Handle share logic
-                            viewModel.shareQrCodes(context,selectedItems)
-                        }) {
-                            Icon(Icons.Default.Share, contentDescription = "Share")
-                        }
-
-                        IconButton(onClick = {
-                            // Handle delete logic
-                            viewModel.deleteQrCodes(selectedItems)
+    val topBar = @Composable {
+        if (inSelectionMode) {
+            MediumTopAppBar(
+                title = { Text("${selectedItems.size} selected") },
+                actions = {
+                    IconButton(onClick = {
+                        // Handle select all logic
+                        if (selectedItems.size == history.size) {
                             selectedItems.clear()
-                        }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete")
+                        } else {
+                            toggleAllItems(selectedItems, history.map { it.imageUri })
                         }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { selectedItems.clear() }) {
-                            Icon(Icons.Default.Close, contentDescription = "Cancel")
-                        }
+                    }) {
+                        Icon(Icons.Default.SelectAll, contentDescription = "Select All")
                     }
-                )
-            }
+                    IconButton(onClick = {
+                        // Handle share logic
+                        viewModel.shareQrCodes(context, selectedItems)
+                    }) {
+                        Icon(Icons.Default.Share, contentDescription = "Share")
+                    }
+
+                    IconButton(onClick = {
+                        // Handle delete logic
+                        viewModel.deleteQrCodes(selectedItems)
+                        selectedItems.clear()
+                    }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete")
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = { selectedItems.clear() }) {
+                        Icon(Icons.Default.Close, contentDescription = "Cancel")
+                    }
+                }
+            )
         }
+
+    }
+    Scaffold(
+        topBar = topBar
+//            if (inSelectionMode) {
+//                MediumTopAppBar(
+//                    title = { Text("${selectedItems.size} selected") },
+//                    actions = {
+//                        IconButton(onClick = {
+//                            // Handle select all logic
+//                            if (selectedItems.size == history.size) {
+//                                selectedItems.clear()
+//                            } else {
+//                                toggleAllItems(selectedItems, history.map { it.imageUri })
+//                            }
+//                        }) {
+//                            Icon(Icons.Default.SelectAll, contentDescription = "Select All")
+//                        }
+//                        IconButton(onClick = {
+//                            // Handle share logic
+//                            viewModel.shareQrCodes(context,selectedItems)
+//                        }) {
+//                            Icon(Icons.Default.Share, contentDescription = "Share")
+//                        }
+//
+//                        IconButton(onClick = {
+//                            // Handle delete logic
+//                            viewModel.deleteQrCodes(selectedItems)
+//                            selectedItems.clear()
+//                        }) {
+//                            Icon(Icons.Default.Delete, contentDescription = "Delete")
+//                        }
+//                    },
+//                    navigationIcon = {
+//                        IconButton(onClick = { selectedItems.clear() }) {
+//                            Icon(Icons.Default.Close, contentDescription = "Cancel")
+//                        }
+//                    }
+//                )
+//            }
+
     ) { padding ->
         Column(
             modifier = Modifier

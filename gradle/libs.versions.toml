@@ -1,33 +1,34 @@
 [versions]
-accompanistPager = "0.33.2-alpha"
+accompanistPager = "0.36.0"
 agp = "8.13.1"
 barcodeScanning = "17.3.0"
-cameraCore = "1.4.2"
-coilCompose = "2.4.0"
-concurrentFuturesKtx = "1.2.0"
-core = "3.5.2"
-foundation = "1.8.2"
-kotlin = "2.0.21"
-coreKtx = "1.16.0"
+cameraCore = "1.5.1"
+coilCompose = "2.7.0"
+concurrentFuturesKtx = "1.3.0"
+core = "3.5.4"
+foundation = "1.9.5"
+guava = "33.5.0-android"
+kotlin = "2.2.21"
+coreKtx = "1.17.0"
 junit = "4.13.2"
-junitVersion = "1.2.1"
-espressoCore = "3.6.1"
-lifecycleRuntimeKtx = "2.9.1"
-activityCompose = "1.10.1"
-composeBom = "2025.06.00"
+junitVersion = "1.3.0"
+espressoCore = "3.7.0"
+lifecycleRuntimeKtx = "2.10.0"
+activityCompose = "1.12.0"
+composeBom = "2025.11.01"
 material = "1.7.8"
 material3 = "1.3.2"
 materialVersion = "1.5.1"
-navigationCompose = "2.9.0"
-roomCommonJvm = "2.7.1"
-roomCompiler = "2.7.1"
-roomKtx = "2.7.1"
-roomRuntime = "2.7.1"
+navigationCompose = "2.9.6"
+roomCommonJvm = "2.8.4"
+roomCompiler = "2.8.4"
+roomKtx = "2.8.4"
+roomRuntime = "2.8.4"
 protoliteWellKnownTypes = "18.0.1"
-runtimeLivedata = "1.8.2"
+runtimeLivedata = "1.9.5"
 transition = "1.6.0"
 ucrop = "2.2.11-native"
-uiUtil = "1.8.2"
+uiUtil = "1.9.5"
 
 [libraries]
 accompanist-pager = { module = "com.google.accompanist:accompanist-pager", version.ref = "accompanistPager" }
@@ -50,6 +51,7 @@ androidx-ui-util = { module = "androidx.compose.ui:ui-util", version.ref = "uiUt
 barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "barcodeScanning" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 core = { module = "com.google.zxing:core", version.ref = "core" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

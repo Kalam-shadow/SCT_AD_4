@@ -28,15 +28,21 @@ android {
             )
         }
     }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.1" // Example, check for latest
     }
-    kotlinOptions {
-        jvmTarget = "11"
+
+    kotlin {
+        // Set the JVM target for the compiler
+        jvmToolchain(17)
     }
     buildFeatures {
         compose = true
+    }
+
+    configurations.implementation {
+        exclude(group = "org.jetbrains", module = "annotations")
     }
 }
 
@@ -54,6 +60,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.room.common.jvm)
     implementation(libs.protolite.well.known.types)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -70,6 +77,7 @@ dependencies {
     // ZXing (QR Code Scanner)
     implementation(libs.core)
 
+    implementation(libs.guava)
     //mlkit
     implementation(libs.barcode.scanning)
 

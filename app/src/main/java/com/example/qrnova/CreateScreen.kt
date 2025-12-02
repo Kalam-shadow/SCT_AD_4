@@ -205,7 +205,7 @@ fun QrInputField(
                     onGenerate()
                 }
             ) {
-                Text("Generate QR Code")
+                Text("Generate QR Code", color = MaterialTheme.colorScheme.primary)
             }
         }
     }
