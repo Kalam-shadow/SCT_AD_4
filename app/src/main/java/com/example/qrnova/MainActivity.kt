@@ -25,7 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ManageHistory
-import androidx.compose.material.icons.filled.NewLabel
+import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -91,7 +91,7 @@ class MainActivity : ComponentActivity() {
 
                 val topLevelRoutes = listOf(
                     TopLevelRoute("QR Scan", "Scanner", Icons.Default.QrCodeScanner),
-                    TopLevelRoute("QR Create", "Creator", Icons.Default.NewLabel)
+                    TopLevelRoute("QR Create", "Creator", Icons.Default.QrCode2)
                 )
 
                 val navBackStackEntry by navController.currentBackStackEntryAsState()

@@ -1,61 +1,68 @@
 package com.example.qrnova
 
  import android.annotation.SuppressLint
-import android.content.ContentValues
-import android.content.Context
-import android.content.Intent
-import android.content.res.Configuration
-import android.graphics.Bitmap
-import android.graphics.Color
-import android.net.Uri
-import android.os.Environment
-import android.provider.MediaStore
-import android.util.Log
-import android.widget.Toast
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
-import androidx.core.graphics.createBitmap
-import androidx.core.graphics.set
-import androidx.lifecycle.ViewModel
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.MultiFormatWriter
-import com.google.zxing.common.BitMatrix
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
+ import android.content.ContentValues
+ import android.content.Context
+ import android.content.Intent
+ import android.content.res.Configuration
+ import android.graphics.Bitmap
+ import android.graphics.Color
+ import android.net.Uri
+ import android.os.Environment
+ import android.provider.MediaStore
+ import android.util.Log
+ import android.widget.Toast
+ import androidx.compose.foundation.Image
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.layout.Arrangement
+ import androidx.compose.foundation.layout.Box
+ import androidx.compose.foundation.layout.Column
+ import androidx.compose.foundation.layout.Row
+ import androidx.compose.foundation.layout.Spacer
+ import androidx.compose.foundation.layout.fillMaxSize
+ import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.foundation.layout.height
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.layout.size
+ import androidx.compose.foundation.layout.width
+ import androidx.compose.foundation.shape.RoundedCornerShape
+ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.filled.Download
+ import androidx.compose.material.icons.filled.QrCode2
+ import androidx.compose.material.icons.filled.Share
+ import androidx.compose.material3.Button
+ import androidx.compose.material3.CardDefaults
+ import androidx.compose.material3.ElevatedCard
+ import androidx.compose.material3.ExperimentalMaterial3Api
+ import androidx.compose.material3.Icon
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.OutlinedButton
+ import androidx.compose.material3.OutlinedTextField
+ import androidx.compose.material3.Text
+ import androidx.compose.material3.TopAppBar
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.LaunchedEffect
+ import androidx.compose.runtime.getValue
+ import androidx.compose.runtime.mutableStateOf
+ import androidx.compose.runtime.remember
+ import androidx.compose.runtime.setValue
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.graphics.asImageBitmap
+ import androidx.compose.ui.platform.LocalConfiguration
+ import androidx.compose.ui.platform.LocalContext
+ import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.unit.dp
+ import androidx.core.content.FileProvider
+ import androidx.core.graphics.createBitmap
+ import androidx.core.graphics.set
+ import androidx.lifecycle.ViewModel
+ import com.google.zxing.BarcodeFormat
+ import com.google.zxing.MultiFormatWriter
+ import com.google.zxing.common.BitMatrix
+ import java.io.File
+ import java.io.FileOutputStream
+ import java.io.IOException
 
 data class QrState(val inputText: String = "", val qrBitmap: Bitmap? = null, val isSaved: Boolean = false)
 
@@ -179,33 +186,31 @@ fun QrInputField(
     ElevatedCard(
         modifier = Modifier
             .padding(16.dp)
+            .fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(6.dp)
     ) {
         Column(
             modifier = Modifier
-                .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f))
-                .padding(8.dp),
+                .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             OutlinedTextField(
                 value = inputText,
-                onValueChange = { onTextChange(it)},
-                label = { Text("Enter Text to Generate QR Code") },
-                modifier = Modifier
-                    .padding(4.dp)
-                    .fillMaxWidth()
+                onValueChange = onTextChange,
+                label = { Text("Enter text to generate QR") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(Modifier.height(16.dp))
 
-            OutlinedButton(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(4.dp),
-                onClick = {
-                    onGenerate()
-                }
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onGenerate
             ) {
-                Text("Generate QR Code", color = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Default.QrCode2, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Generate")
             }
         }
     }
@@ -216,29 +221,62 @@ fun QrDisplayField(qrBitmap : Bitmap?) {
     ElevatedCard(
         modifier = Modifier
             .padding(16.dp)
-            .fillMaxWidth()
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp)
     ) {
         Column(
             modifier = Modifier
-                .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f))
-                .padding(36.dp)
+//                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                .padding(28.dp)
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
 
         ) {
             if (qrBitmap == null) {
-                Text("No QR Code Generated")
-                Spacer(modifier = Modifier.height(2.dp))
+                Icon(
+                    imageVector = Icons.Default.QrCode2,
+                    contentDescription = "No QR",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.size(90.dp)
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "No QR Code Generated",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Generate a QR to preview it here.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
             }
             else {
-                Text("QR Code Generated:")
-                Spacer(modifier = Modifier.height(2.dp))
-                Image(
-                    bitmap = qrBitmap.asImageBitmap(),
-                    contentDescription = "Generated QR Code",
-                    modifier = Modifier.size(200.dp)
+                Text(
+                    text = "Generated QR Code",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+//                Surface(
+//                    tonalElevation = 4.dp,
+//                    shape = RoundedCornerShape(16.dp),
+//                    modifier = Modifier.size(220.dp)
+//                ) {
+                    Image(
+                        bitmap = qrBitmap.asImageBitmap(),
+                        contentDescription = "Generated QR Code",
+                        modifier = Modifier.padding(12.dp)
+                    )
+//                }
             }
         }
     }
@@ -250,13 +288,13 @@ fun QrUtilField(context: Context, qrBitmap: Bitmap?) {
         ElevatedCard(
             modifier = Modifier
                 .padding(16.dp)
-                .fillMaxWidth()
+                .fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(6.dp)
         ) {
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f))
+//                    .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f))
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
@@ -265,15 +303,19 @@ fun QrUtilField(context: Context, qrBitmap: Bitmap?) {
                         saveQRCodeToStorage(qrBitmap, context)
                     }
                 ) {
-                    Text("Save QR Code")
+                    Icon(Icons.Default.Download, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Save")
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+//                Spacer(modifier = Modifier.width(8.dp))
                 OutlinedButton(
                     onClick = {
                         shareQRCode(qrBitmap, context)
                     }
                 ) {
-                    Text("Share QR Code")
+                    Icon(Icons.Default.Share, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Share")
                 }
             }
         }

@@ -28,7 +28,6 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -36,7 +35,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -84,9 +82,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.UiComposable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -117,6 +113,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.Executors
+import kotlin.coroutines.resume
 
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.R)
@@ -402,15 +399,15 @@ fun ScanScreen(
                 )
                 }
                 androidViewSection()
-                Image(
-                    painter = painterResource(id = R.drawable.neo_frame),
-                    contentDescription = "Scanner Frame",
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .aspectRatio(1f)
-                        .fillMaxSize(0.9f), // adjust as needed
-                    contentScale = ContentScale.FillBounds
-                )
+//                Image(
+//                    painter = painterResource(id = R.drawable.neo_frame),
+//                    contentDescription = "Scanner Frame",
+//                    modifier = Modifier
+//                        .align(Alignment.Center)
+//                        .aspectRatio(1f)
+//                        .fillMaxSize(0.9f), // adjust as needed
+//                    contentScale = ContentScale.FillBounds
+//                )
                 Row(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -663,6 +660,35 @@ fun decodeQRCodeFromImage(context: Context, imageUri: Uri): String? {
     }
 }
 
+//suspend fun decodeQRCodeFromImage(context: Context, imageUri: Uri): String? = suspendCancellableCoroutine { cont ->
+//    try {
+//        // Create InputImage from URI
+//        val image = InputImage.fromFilePath(context, imageUri)
+//
+//        // Configure scanner to only look for QR codes (optional)
+//        val options = BarcodeScannerOptions.Builder()
+//            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+//            .build()
+//
+//        val scanner = BarcodeScanning.getClient(options)
+//
+//        scanner.process(image)
+//            .addOnSuccessListener { barcodes ->
+//                val result = barcodes.firstOrNull()?.rawValue
+//                cont.resume(result)
+//            }
+//            .addOnFailureListener { e ->
+//                Log.e("QRScan", "Failed to decode QR", e)
+//                cont.resume(null)
+//            }
+//        cont.invokeOnCancellation {
+//            scanner.close()
+//        }
+//    } catch (e: Exception) {
+//        Log.e("QRScan", "Error decoding QR from image", e)
+//        cont.resume(null)
+//    }
+//}
 
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -682,10 +708,10 @@ private suspend fun scanQRCode(imageProxy: ImageProxy): String? = suspendCancell
         scanner.process(inputImage)
             .addOnSuccessListener { barcodes ->
                 val result = barcodes.firstOrNull()?.rawValue
-                cont.resume(result) { cause, _, _ -> null?.let { it(cause) } }
+                cont.resume(result)
             }
             .addOnFailureListener {
-                cont.resume(null) { cause, _, _ -> null?.let { it1 -> it1(cause) } }
+                cont.resume(null)
             }
             .addOnCompleteListener {
                 imageProxy.close()

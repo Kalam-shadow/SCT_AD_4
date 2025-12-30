@@ -210,44 +210,6 @@ fun ScannedHistoryScreen(viewModel: QrHistoryViewModel) {
 
     Scaffold(
         topBar = topBar
-//        topBar = {
-//            if (inSelectionMode) {
-//                MediumTopAppBar(
-//                    title = { Text("${selectedItems.size} selected") },
-//                    actions = {
-//                        IconButton(onClick = {
-//                            // Handle select all logic
-//                            if (selectedItems.size == history.size) {
-//                                selectedItems.clear()
-//                            } else {
-//                                toggleAllItems(selectedItems, history.map { it.content })
-//                            }
-//                        }) {
-//                            Icon(Icons.Default.SelectAll, contentDescription = "Select All")
-//                        }
-//                        IconButton(onClick = {
-//                            // Handle share logic
-//                            viewModel.shareScannedQrCodes(context, selectedItems)
-//                        }) {
-//                            Icon(Icons.Default.Share, contentDescription = "Share")
-//                        }
-//
-//                        IconButton(onClick = {
-//                            // Handle delete logic
-//                            viewModel.deleteScannedQr(selectedItems)
-//                            selectedItems.clear()
-//                        }) {
-//                            Icon(Icons.Default.Delete, contentDescription = "Delete")
-//                        }
-//                    },
-//                    navigationIcon = {
-//                        IconButton(onClick = { selectedItems.clear() }) {
-//                            Icon(Icons.Default.Close, contentDescription = "Cancel")
-//                        }
-//                    }
-//                )
-//            }
-//        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -383,43 +345,6 @@ fun CreatedHistoryScreen(viewModel: QrHistoryViewModel) {
     }
     Scaffold(
         topBar = topBar
-//            if (inSelectionMode) {
-//                MediumTopAppBar(
-//                    title = { Text("${selectedItems.size} selected") },
-//                    actions = {
-//                        IconButton(onClick = {
-//                            // Handle select all logic
-//                            if (selectedItems.size == history.size) {
-//                                selectedItems.clear()
-//                            } else {
-//                                toggleAllItems(selectedItems, history.map { it.imageUri })
-//                            }
-//                        }) {
-//                            Icon(Icons.Default.SelectAll, contentDescription = "Select All")
-//                        }
-//                        IconButton(onClick = {
-//                            // Handle share logic
-//                            viewModel.shareQrCodes(context,selectedItems)
-//                        }) {
-//                            Icon(Icons.Default.Share, contentDescription = "Share")
-//                        }
-//
-//                        IconButton(onClick = {
-//                            // Handle delete logic
-//                            viewModel.deleteQrCodes(selectedItems)
-//                            selectedItems.clear()
-//                        }) {
-//                            Icon(Icons.Default.Delete, contentDescription = "Delete")
-//                        }
-//                    },
-//                    navigationIcon = {
-//                        IconButton(onClick = { selectedItems.clear() }) {
-//                            Icon(Icons.Default.Close, contentDescription = "Cancel")
-//                        }
-//                    }
-//                )
-//            }
-
     ) { padding ->
         Column(
             modifier = Modifier
